@@ -983,6 +983,21 @@
     white-space: nowrap;
   }
 
+  /* ============== GEO LIST (modal) ============== */
+  .geo-item{
+    display:flex; gap:14px; padding: 14px 0; align-items:center; cursor:pointer;
+    border-bottom: 1px solid var(--line);
+  }
+  .geo-item:last-child{ border-bottom: 0; }
+  .geo-flag{
+    width:40px; height:40px; border-radius: 12px;
+    background: var(--bg-alt);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 22px; flex-shrink: 0;
+  }
+  .geo-item .cat-title{ font-weight:600; font-size: 15px; }
+  .geo-item .cat-sub{ color: var(--text-2); font-size: 13px; margin-top: 2px; }
+
   /* misc */
   .hidden{ display:none !important; }
 
@@ -1858,6 +1873,14 @@
             <div class="count-card" data-v="35" data-price="27500">35 публикаций</div>
           </div>
 
+          <div class="group-label">Где показывать объявление</div>
+          <div class="group-sub">При выборе Узбекистана шанс продать выше</div>
+          <div class="pill-row" data-group="pkg-geo">
+            <div class="pill active" data-v="uz">Узбекистан</div>
+            <div class="pill" data-v="tashkent">Ташкент и область</div>
+          </div>
+          <div class="link" id="geo-other-link" style="margin-top: 10px; font-size: 15px;" onclick="openSheet('geo-sheet')">Другое <span style="color: var(--text-3); font-size: 11px;">▾</span></div>
+
           <div class="group-label">Срок публикации</div>
           <div class="group-sub">Чем дольше, тем больше просмотров</div>
           <div class="pill-row" data-group="pkg-duration">
@@ -2076,7 +2099,7 @@
               </div>
               <div class="it">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                Показ по Узбекистану
+                Показ по <span id="new-pkg-geo">Узбекистану</span>
               </div>
             </div>
           </div>
@@ -2096,7 +2119,94 @@
     </div>
 
     <!-- ========================================= BOTTOM SHEET: ALL CATEGORIES ========================================= -->
-    <div class="sheet-backdrop" id="sheet-backdrop" onclick="closeSheet('cats-sheet')"></div>
+    <div class="sheet-backdrop" id="sheet-backdrop" onclick="closeAnySheet()"></div>
+      <!-- ========================================= BOTTOM SHEET: GEOGRAPHY ========================================= -->
+      <div class="sheet" id="geo-sheet">
+        <div class="sheet-grabber"></div>
+        <div class="modal-header">
+          <div class="h">Где показывать</div>
+          <button class="icon-btn" onclick="closeSheet('geo-sheet')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <input class="search-input" placeholder="Поиск"/>
+        <div class="sheet-content" style="margin-top: 14px;">
+          <div class="geo-list" data-group="geo-modal">
+            <div class="geo-item geo-uz" onclick="pickGeoModal(this, 'uz', 'Узбекистан')">
+              <div class="geo-flag">🇺🇿</div>
+              <div class="cat-body"><div class="cat-title">Узбекистан</div><div class="cat-sub">По всей стране</div></div>
+              <div class="radio-sm checked"></div>
+            </div>
+            <div class="geo-item" onclick="pickGeoModal(this, 'tashkent', 'Ташкентская область')">
+              <div class="geo-flag">📍</div>
+              <div class="cat-body"><div class="cat-title">Ташкентская область</div></div>
+              <div class="radio-sm"></div>
+            </div>
+            <div class="geo-item" onclick="pickGeoModal(this, 'samarkand', 'Самаркандская область')">
+              <div class="geo-flag">📍</div>
+              <div class="cat-body"><div class="cat-title">Самаркандская область</div></div>
+              <div class="radio-sm"></div>
+            </div>
+            <div class="geo-item" onclick="pickGeoModal(this, 'bukhara', 'Бухарская область')">
+              <div class="geo-flag">📍</div>
+              <div class="cat-body"><div class="cat-title">Бухарская область</div></div>
+              <div class="radio-sm"></div>
+            </div>
+            <div class="geo-item" onclick="pickGeoModal(this, 'andijan', 'Андижанская область')">
+              <div class="geo-flag">📍</div>
+              <div class="cat-body"><div class="cat-title">Андижанская область</div></div>
+              <div class="radio-sm"></div>
+            </div>
+            <div class="geo-item" onclick="pickGeoModal(this, 'fergana', 'Ферганская область')">
+              <div class="geo-flag">📍</div>
+              <div class="cat-body"><div class="cat-title">Ферганская область</div></div>
+              <div class="radio-sm"></div>
+            </div>
+            <div class="geo-item" onclick="pickGeoModal(this, 'namangan', 'Наманганская область')">
+              <div class="geo-flag">📍</div>
+              <div class="cat-body"><div class="cat-title">Наманганская область</div></div>
+              <div class="radio-sm"></div>
+            </div>
+            <div class="geo-item" onclick="pickGeoModal(this, 'khorezm', 'Хорезмская область')">
+              <div class="geo-flag">📍</div>
+              <div class="cat-body"><div class="cat-title">Хорезмская область</div></div>
+              <div class="radio-sm"></div>
+            </div>
+            <div class="geo-item" onclick="pickGeoModal(this, 'kashkadarya', 'Кашкадарьинская область')">
+              <div class="geo-flag">📍</div>
+              <div class="cat-body"><div class="cat-title">Кашкадарьинская область</div></div>
+              <div class="radio-sm"></div>
+            </div>
+            <div class="geo-item" onclick="pickGeoModal(this, 'surkhandarya', 'Сурхандарьинская область')">
+              <div class="geo-flag">📍</div>
+              <div class="cat-body"><div class="cat-title">Сурхандарьинская область</div></div>
+              <div class="radio-sm"></div>
+            </div>
+            <div class="geo-item" onclick="pickGeoModal(this, 'jizzakh', 'Джизакская область')">
+              <div class="geo-flag">📍</div>
+              <div class="cat-body"><div class="cat-title">Джизакская область</div></div>
+              <div class="radio-sm"></div>
+            </div>
+            <div class="geo-item" onclick="pickGeoModal(this, 'navoiy', 'Навоийская область')">
+              <div class="geo-flag">📍</div>
+              <div class="cat-body"><div class="cat-title">Навоийская область</div></div>
+              <div class="radio-sm"></div>
+            </div>
+            <div class="geo-item" onclick="pickGeoModal(this, 'sirdaryo', 'Сырдарьинская область')">
+              <div class="geo-flag">📍</div>
+              <div class="cat-body"><div class="cat-title">Сырдарьинская область</div></div>
+              <div class="radio-sm"></div>
+            </div>
+            <div class="geo-item" onclick="pickGeoModal(this, 'karakalpakstan', 'Республика Каракалпакстан')">
+              <div class="geo-flag">📍</div>
+              <div class="cat-body"><div class="cat-title">Республика Каракалпакстан</div></div>
+              <div class="radio-sm"></div>
+            </div>
+          </div>
+        </div>
+        <button class="btn" onclick="closeSheet('geo-sheet')">Выбрать</button>
+      </div>
+
     <div class="sheet" id="cats-sheet">
       <div class="sheet-grabber"></div>
       <div class="modal-header">
@@ -2373,7 +2483,24 @@
         const dur = durEl ? durEl.dataset.v : '30';
         currentPkgLabel = `${v} публикаций на ${dur} дней`;
       }
-      if (group.dataset.group === 'pkg-duration'){
+      if (group.dataset.group === 'pkg-geo'){
+        // Reset Другое link visual when user picks a pill
+        const link = document.getElementById('geo-other-link');
+        if (link){
+          link.innerHTML = 'Другое <span style="color: var(--text-3); font-size: 11px;">▾</span>';
+          link.style.color = '';
+          link.style.fontWeight = '';
+        }
+        // Sync modal selection to the picked pill's code
+        const code = target.dataset.v;
+        const modalItems = document.querySelectorAll('[data-group="geo-modal"] .geo-item');
+        modalItems.forEach(it => {
+          it.querySelector('.radio-sm').classList.remove('checked');
+        });
+        const matchModal = document.querySelector(`[data-group="geo-modal"] .geo-item[onclick*="'${code}'"]`);
+        if (matchModal) matchModal.querySelector('.radio-sm').classList.add('checked');
+      }
+            if (group.dataset.group === 'pkg-duration'){
         const cntEl = document.querySelector('[data-group="pkg-count"] .count-card.active');
         const v = cntEl ? cntEl.dataset.v : '25';
         const dur = target.dataset.v;
@@ -2542,6 +2669,24 @@
         if (durEl){
           document.getElementById('new-pkg-dur').textContent = durEl.dataset.v;
         }
+        const geoEl = document.querySelector('[data-group="pkg-geo"] .pill.active');
+        const geoLabels = {"uz": "Узбекистану", "tashkent": "Ташкентской области", "samarkand": "Самаркандской области", "bukhara": "Бухарской области", "andijan": "Андижанской области", "fergana": "Ферганской области", "namangan": "Наманганской области", "khorezm": "Хорезмской области", "kashkadarya": "Кашкадарьинской области", "surkhandarya": "Сурхандарьинской области", "jizzakh": "Джизакской области", "navoiy": "Навоийской области", "sirdaryo": "Сырдарьинской области", "karakalpakstan": "Республике Каракалпакстан"};
+        const geoSpan = document.getElementById('new-pkg-geo');
+        if (geoSpan){
+          if (geoEl){
+            geoSpan.textContent = geoLabels[geoEl.dataset.v] || 'Узбекистану';
+          } else {
+            // Other selected via modal
+            const modalActive = document.querySelector('[data-group="geo-modal"] .geo-item .radio-sm.checked');
+            if (modalActive){
+              const itm = modalActive.closest('.geo-item');
+              const m = itm.getAttribute('onclick').match(/'([^']+)',\s*'([^']+)'/);
+              if (m && geoLabels[m[1]]){
+                geoSpan.textContent = geoLabels[m[1]];
+              }
+            }
+          }
+        }
       } else if (currentBuyType === 'visvas') {
         sub.innerHTML = 'Выделение цветом активировано.<br/>Объявление будет выделяться в&nbsp;ленте.';
       } else if (currentBuyType === 'tg') {
@@ -2552,6 +2697,37 @@
       go('payment-success');
     }, 2200);
   }
+
+  function closeAnySheet(){
+    document.getElementById('sheet-backdrop').classList.remove('show');
+    document.querySelectorAll('.sheet').forEach(s => s.classList.remove('show'));
+  }
+
+  function pickGeoModal(el, code, label){
+    el.parentElement.querySelectorAll('.geo-item .radio-sm').forEach(r => r.classList.remove('checked'));
+    el.querySelector('.radio-sm').classList.add('checked');
+    // Sync top-of-screen geo pills + Другое link
+    const row = document.querySelector('[data-group="pkg-geo"]');
+    if (!row) return;
+    row.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    const link = document.getElementById('geo-other-link');
+    // Find matching pill or fall back to Другое
+    let matched = false;
+    row.querySelectorAll('.pill').forEach(p => {
+      if (p.dataset.v === code){ p.classList.add('active'); matched = true; }
+    });
+    if (!matched && link){
+      // No pill matches → show label inside Другое link as active
+      link.innerHTML = label + ' <span style="color: var(--primary); font-size: 11px;">▾</span>';
+      link.style.color = 'var(--primary)';
+      link.style.fontWeight = '600';
+    } else if (matched && link){
+      link.innerHTML = 'Другое <span style="color: var(--text-3); font-size: 11px;">▾</span>';
+      link.style.color = '';
+      link.style.fontWeight = '';
+    }
+  }
+
 </script>
 
 </body>
