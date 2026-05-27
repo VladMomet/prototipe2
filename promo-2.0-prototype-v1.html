@@ -1,0 +1,2558 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Promo 2.0 — Прототип v1 (через Мои объявления)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  /* ============== TOKENS ============== */
+  :root{
+    /* Brand */
+    --primary:        #1B3CE3;   /* deep royal blue from CTAs */
+    --primary-press:  #1633B8;
+    --accent-pink:    #FF2D8C;   /* discount badges */
+    --success:        #2ECC71;
+
+    /* Neutrals */
+    --bg:             #FFFFFF;
+    --bg-alt:         #F2F2F4;   /* card gray */
+    --bg-alt-2:       #ECECEE;
+    --bg-stage:       #DDDFE4;   /* phone-frame background */
+    --line:           #E6E6EA;
+
+    /* Text */
+    --text:           #0A0A0A;
+    --text-2:         #8A8A8E;
+    --text-3:         #C0C0C5;
+
+    /* Misc */
+    --link:           #1B3CE3;
+
+    /* Geometry */
+    --r-card:         20px;
+    --r-card-sm:      16px;
+    --r-pill:         999px;
+    --r-button:       14px;
+
+    /* Shadows */
+    --shadow-nav:     0 8px 24px rgba(15, 18, 35, .08), 0 2px 4px rgba(15,18,35,.04);
+    --shadow-card:    0 1px 2px rgba(0,0,0,.04);
+
+    /* Typography */
+    --font: "Onest", -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+  }
+
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{ margin:0; padding:0; background: linear-gradient(180deg,#E7E8EC 0%, #D7D9DE 100%); min-height:100vh; font-family: var(--font); color:var(--text); }
+  body{ display:flex; align-items:center; justify-content:center; padding: 24px 16px; }
+  button{ font-family: inherit; }
+
+  /* ============== STAGE / DEVICE FRAME ============== */
+  .stage{
+    display:flex; flex-direction:column; align-items:center; gap:18px; width:100%;
+  }
+  .stage-title{
+    color:#3B3D45; font-weight:600; font-size:13px; letter-spacing:.04em;
+    text-transform:uppercase; opacity:.6;
+  }
+  .device{
+    width: 393px; height: 852px; background:#fff; border-radius: 54px; position:relative; overflow:hidden;
+    box-shadow:
+      0 50px 100px rgba(20,22,40,.22),
+      0 18px 38px rgba(20,22,40,.16),
+      0 0 0 12px #0E0F12,
+      0 0 0 13px #20222A;
+    isolation: isolate;
+  }
+  .device::before{ /* dynamic island */
+    content:""; position:absolute; top:11px; left:50%; transform:translateX(-50%);
+    width:120px; height:34px; background:#0E0F12; border-radius:20px; z-index:50;
+  }
+  .device-screen{
+    position:absolute; inset:0; background:var(--bg); overflow:hidden;
+  }
+
+  /* Status bar */
+  .statusbar{
+    position:relative; height:54px; padding: 18px 38px 0; display:flex; justify-content:space-between; align-items:center;
+    z-index:40; font-weight:600; font-size:15px;
+  }
+  .statusbar .right{ display:flex; align-items:center; gap:6px; }
+  .statusbar .time{ display:flex; align-items:center; gap:6px; }
+  .arrow-sent{ display:inline-block; width:13px; height:13px; transform: rotate(-30deg) translateY(-1px);}
+  .arrow-sent svg{ width:100%; height:100%; }
+
+  /* Home indicator */
+  .home-indicator{
+    position:absolute; bottom:9px; left:50%; transform:translateX(-50%);
+    width:134px; height:5px; border-radius:3px; background:#0A0A0A; z-index:60;
+  }
+
+  /* ============== SCREEN STACK ============== */
+  .screens{ position:absolute; inset:54px 0 0 0; }
+  .screen{
+    position:absolute; inset:0; overflow-y:auto; overflow-x:hidden;
+    background:var(--bg);
+    transform: translateX(100%); opacity:0; pointer-events:none;
+    transition: transform .32s cubic-bezier(.22,.61,.36,1), opacity .32s ease;
+    padding-bottom: 0;
+    scrollbar-width:none;
+    display: flex;
+    flex-direction: column;
+  }
+  .screen > .cta-dock{ margin-top: auto; }
+  .screen::-webkit-scrollbar{ display:none; }
+  .screen.active{ transform: translateX(0); opacity:1; pointer-events:auto; }
+  .screen.behind{ transform: translateX(-30%); opacity: .35; }
+
+  /* Sheet modal */
+  .sheet-backdrop{
+    position:absolute; inset:0; background: rgba(0,0,0,0); transition: background .25s ease; pointer-events:none; z-index:70;
+  }
+  .sheet-backdrop.show{ background: rgba(0,0,0,.4); pointer-events:auto; }
+  .sheet{
+    position:absolute; left:0; right:0; bottom:0; background:#fff;
+    border-radius: 24px 24px 0 0; padding: 18px 20px 28px;
+    transform: translateY(100%); transition: transform .35s cubic-bezier(.22,.61,.36,1);
+    z-index:71; max-height: 92%; display:flex; flex-direction:column;
+  }
+  .sheet.show{ transform: translateY(0); }
+  .sheet-grabber{ width:36px; height:4px; background:#D6D6DA; border-radius:3px; margin: 4px auto 14px; }
+
+  /* ============== COMMON UI ============== */
+  .nav{ padding: 6px 16px 6px; display:flex; align-items:center; gap:12px; min-height:44px; }
+  .nav .title{ flex:1; text-align:center; font-weight:700; font-size:16px; }
+  .nav .spacer-r{ width:24px; }
+  .icon-btn{
+    width:32px; height:32px; display:inline-flex; align-items:center; justify-content:center;
+    background:transparent; border:0; cursor:pointer; color:var(--text);
+  }
+  .icon-btn svg{ width:24px; height:24px; }
+  .h1{ font-weight:700; font-size:30px; line-height:1.12; letter-spacing:-.01em; }
+  .h2{ font-weight:700; font-size:22px; line-height:1.2; letter-spacing:-.005em; }
+  .subtle{ color:var(--text-2); font-size:15px; line-height:1.35; }
+
+  .link{ color:var(--link); font-weight:500; cursor:pointer; }
+
+  .btn{
+    display:flex; align-items:center; justify-content:center;
+    width:100%; height:54px; border-radius: var(--r-button); border:0;
+    background: var(--primary); color:#fff; font-weight:600; font-size:16px; cursor:pointer;
+    transition: background .15s ease, transform .1s ease;
+  }
+  .btn:active{ background: var(--primary-press); transform: scale(.99); }
+  .btn-secondary{ background:#fff; color:var(--primary); }
+  .btn-ghost{ background: transparent; color: var(--text); }
+
+  /* Floating bottom-bar (CTA pinned to screen bottom) */
+  .cta-dock{
+    position:sticky; bottom:0; left:0; right:0; padding: 12px 16px 22px;
+    background: linear-gradient(180deg, rgba(255,255,255,0) 0%, #fff 30%);
+    display:flex; flex-direction:column; gap:8px;
+  }
+
+  /* ============== STATUS BAR ICONS ============== */
+  .sig-icon, .wifi-icon, .batt-icon{ display:inline-block; }
+  .sig-icon svg, .wifi-icon svg, .batt-icon svg{ display:block; }
+
+  /* ============== PROFILE SCREEN ============== */
+  .profile-wrap{ padding: 16px 20px 140px; }
+  .topbar-bell{ display:flex; justify-content:flex-end; padding: 4px 0 16px; }
+  .topbar-bell .icon-btn{ width:38px; height:38px; }
+  .avatar{
+    width:96px; height:96px; border-radius:50%;
+    background:#F0F0F2; display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:42px; color:#1C1C1E; margin-bottom: 18px;
+  }
+  .name{ font-weight:700; font-size:30px; line-height:1.1; margin-bottom:8px; }
+  .rating{
+    display:flex; align-items:center; gap:8px; margin-bottom: 18px;
+    color: var(--text); font-weight:500; font-size:16px;
+  }
+  .rating .star{ color:#F5B400; }
+  .rating .sep{ color: var(--text-2); }
+  .rating .reviews{ color: var(--link); text-decoration: underline; cursor:pointer; }
+
+  .duo-cards{
+    display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:10px;
+  }
+  .info-card{
+    background: var(--bg-alt); border-radius: 20px; padding: 14px 16px; min-height: 84px;
+    display:flex; flex-direction:column; justify-content:center; cursor:pointer;
+  }
+  .info-card .hd{ font-weight:600; font-size:16px; display:flex; align-items:center; gap:6px; }
+  .info-card .sb{ color: var(--text-2); font-size:13px; margin-top: 4px; line-height:1.3; }
+
+  .seller-card{
+    background: var(--bg-alt); border-radius:20px; padding: 12px; display:flex; gap:12px; align-items:center;
+    margin-bottom: 22px; cursor:pointer;
+  }
+  .seller-thumb{
+    width:54px; height:54px; border-radius:14px; flex-shrink:0;
+    background: linear-gradient(135deg, #C9A877 0%, #6B4830 100%);
+    position:relative; overflow:hidden;
+  }
+  .seller-thumb::after{
+    content:"🍽️"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size: 28px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.2));
+  }
+  .seller-card .text{ display:flex; flex-direction:column; }
+  .seller-card .title{ font-weight:600; font-size:15px; }
+  .seller-card .sub{ color: var(--text-2); font-size:14px; }
+
+  .menu-list{ padding-top: 8px; }
+  .menu-item{
+    display:flex; align-items:center; gap:14px; padding: 18px 4px;
+    cursor:pointer; border-bottom: 1px solid transparent;
+  }
+  .menu-item .ic{
+    width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center;
+    color: var(--text);
+  }
+  .menu-item .lbl{ font-size:17px; font-weight:500; }
+  .menu-item.highlighted{
+    position:relative;
+  }
+  .menu-item.highlighted::after{
+    content:""; position:absolute; right:-20px; top: 50%; width:60px; height:1px; background: var(--text);
+  }
+
+  /* Bottom nav */
+  .bottom-nav{
+    position:absolute; left: 12px; right: 12px; bottom: 22px;
+    display:flex; align-items:center; gap:10px; z-index: 30;
+  }
+  .nav-pill{
+    flex:1; height:62px; background:#fff; border-radius: 38px;
+    box-shadow: var(--shadow-nav);
+    display:flex; align-items:center; justify-content:space-around;
+    padding: 0 22px;
+  }
+  .nav-pill .ni{
+    width:32px; height:32px; display:flex; align-items:center; justify-content:center;
+    position:relative; color:#666; cursor:pointer;
+  }
+  .nav-pill .ni.active{ color:var(--text); }
+  .nav-pill .ni .dot{
+    position:absolute; top:2px; right:2px; width:9px; height:9px; border-radius:50%; background: var(--primary);
+    border:2px solid #fff;
+  }
+  .fab{
+    width:62px; height:62px; border-radius:50%; background: var(--primary);
+    display:flex; align-items:center; justify-content:center; color:#fff;
+    box-shadow: var(--shadow-nav); cursor:pointer;
+  }
+  .fab svg{ width:28px; height:28px; }
+
+  /* ============== PROMO HUB ============== */
+  .promo-grid-2{
+    display:grid; grid-template-columns: 1fr 1fr; gap:8px; padding: 4px 16px 0;
+  }
+  .promo-card{
+    background: var(--bg-alt); border-radius: var(--r-card); padding: 16px;
+    min-height: 138px; display:flex; flex-direction:column; cursor:pointer; position:relative;
+    transition: transform .12s ease;
+  }
+  .promo-card:active{ transform: scale(.985); }
+  .promo-card .emoji{ font-size:32px; line-height:1; margin-bottom: 18px; }
+  .promo-card .ttl{ font-weight:700; font-size:17px; margin-bottom:6px; }
+  .promo-card .desc{ font-size:13px; color: var(--text-2); line-height:1.3; }
+  .badge-pink{
+    position:absolute; top:-8px; left:50%; transform: translateX(-50%);
+    background: var(--accent-pink); color:#fff; font-weight:600; font-size:12px;
+    padding: 5px 10px; border-radius: var(--r-pill);
+  }
+
+  .info-row{
+    margin: 14px 16px 0; background: var(--bg-alt);
+    border-radius: var(--r-card); padding: 14px 16px;
+    display:flex; align-items:center; gap:12px; cursor:pointer;
+  }
+  .info-row .em{ font-size:30px; line-height:1; flex-shrink:0; }
+  .info-row .tx{ flex:1; font-weight:500; font-size:15px; line-height:1.25; }
+  .info-row .chev{ color: var(--text-3); flex-shrink:0; }
+
+  .pkg-promo-row{
+    margin: 10px 16px 0; background: linear-gradient(135deg,#EEF1FF 0%, #F4EEFF 100%);
+    border-radius: var(--r-card); padding: 16px; cursor:pointer; position:relative; overflow:hidden;
+  }
+  .pkg-promo-row .ttl{ font-weight:700; font-size:17px; margin-bottom:4px; max-width: 65%; }
+  .pkg-promo-row .sb{ font-size: 13px; color: var(--text-2); max-width: 65%; line-height:1.3; }
+  .pkg-promo-row .em{ position:absolute; right: -6px; top: -10px; font-size: 96px; opacity:.5; line-height:1; }
+  .pkg-promo-row .pill{
+    margin-top:10px; display:inline-flex; align-items:center; gap:6px;
+    background: rgba(27,60,227,.1); color: var(--primary); padding: 6px 12px;
+    border-radius: var(--r-pill); font-weight:600; font-size:13px;
+  }
+
+  /* Tabs */
+  .tabs{
+    display:flex; gap:18px; padding: 22px 16px 0; align-items:flex-end;
+  }
+  .tab{
+    font-weight:700; font-size:18px; color: var(--text-3); padding-bottom: 10px;
+    border-bottom: 2px solid transparent; cursor:pointer; transition: color .15s ease, border-color .15s ease;
+  }
+  .tab.active{ color: var(--text); border-bottom-color: var(--text); }
+  .tab .count{ font-size:12px; vertical-align: super; margin-left: 2px; color: inherit; opacity:.7; }
+
+  /* Promoted item list */
+  .item-row{
+    display:flex; gap:12px; padding: 16px; cursor: default;
+  }
+  .item-thumb{
+    width: 84px; height: 84px; border-radius: 12px; flex-shrink:0;
+    background-size: cover; background-position: center; background-color: #EFEFF1;
+    position:relative; overflow:hidden;
+  }
+  .item-thumb.iphone{
+    background: linear-gradient(135deg,#7C7B82 0%, #3F3D45 100%);
+  }
+  .item-thumb.plate{
+    background: linear-gradient(135deg, #F6E8C8 0%, #DCC4A0 100%);
+  }
+  .item-thumb.shoe{
+    background: linear-gradient(135deg, #B6CCE2 0%, #6E839A 100%);
+  }
+  .item-thumb-em{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size: 36px;
+  }
+  .item-body{ flex:1; min-width:0; }
+  .item-title{ font-weight:600; font-size:15px; line-height:1.25; }
+  .item-price{ font-weight:700; font-size:16px; margin-top: 4px; }
+  .item-status{ margin-top: 6px; font-weight:500; font-size:13px; display:flex; align-items:center; gap:6px; }
+  .item-status.boost{ color: var(--accent-pink); }
+  .item-status.visvas{ color: #8B5CF6; }
+  .item-status.expiring{ color: #E45050; }
+  .item-stats{ margin-top: 6px; display:flex; gap:14px; color: var(--text-2); font-size:13px; font-weight:500; }
+  .item-stat{ display:flex; align-items:center; gap:4px; }
+  .item-stat .delta{ color: var(--text-2); font-weight: 500; }
+  .item-stat .delta.up{ color: var(--success); }
+
+  .item-menu{ flex-shrink:0; color: var(--text-2); padding: 4px; cursor:pointer; }
+
+  .upsell-bubble{
+    margin: 0 16px 14px 100px; background: var(--bg-alt); border-radius: 14px;
+    padding: 10px 14px; font-size:13px; color: var(--text); line-height:1.3;
+  }
+
+  /* ============== PROMO-TYPES (DIVIDER) ============== */
+  .types-wrap{ padding: 6px 20px 0; }
+  .type-card{
+    background: var(--bg-alt); border-radius: var(--r-card); padding: 18px;
+    display:flex; align-items:center; gap:14px; cursor:pointer;
+    margin-bottom: 12px; transition: transform .12s ease, background .15s ease;
+  }
+  .type-card:active{ transform: scale(.985); background: var(--bg-alt-2); }
+  .type-card .em{ font-size:36px; flex-shrink:0; line-height:1; }
+  .type-card .ti{ font-weight:700; font-size:17px; margin-bottom: 4px; }
+  .type-card .sb{ color: var(--text-2); font-size:13px; line-height:1.3; }
+  .type-card .ch{ color: var(--text-3); flex-shrink:0; }
+  .type-card .body{ flex:1; min-width:0; }
+
+  /* ============== ITEMS SELECT ============== */
+  .item-pickable{
+    display:flex; gap:12px; padding: 14px 16px; align-items:flex-start; cursor:pointer;
+    border-bottom: 1px solid var(--line);
+  }
+  .item-pickable:active{ background: var(--bg-alt); }
+  .radio{
+    width:24px; height:24px; border-radius:50%; border: 2px solid var(--text-3);
+    flex-shrink:0; margin-top: 30px; display:flex; align-items:center; justify-content:center;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .radio.checked{ border-color: var(--primary); background: var(--primary); }
+  .radio.checked::after{
+    content:""; width:8px; height:8px; border-radius:50%; background:#fff;
+  }
+
+  /* ============== BOOST CONFIG ============== */
+  .boost-wrap{ padding: 4px 20px 0; }
+  .group-label{ font-weight:700; font-size:18px; margin: 22px 0 8px; }
+  .group-sub{ color: var(--text-2); font-size:14px; margin-bottom: 12px; }
+
+  .pill-row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .pill{
+    padding: 12px 20px; border-radius: var(--r-pill); background: var(--bg-alt);
+    border: 2px solid transparent; font-weight:600; font-size:15px;
+    cursor:pointer; transition: border-color .15s ease, background .15s ease;
+  }
+  .pill.active{ border-color: var(--primary); background: #fff; }
+
+  .grid-2{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .choice-card{
+    background: var(--bg-alt); border-radius: var(--r-card); padding: 16px 14px;
+    border: 2px solid transparent; cursor:pointer; position:relative;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .choice-card.active{ border-color: var(--primary); background: #fff; }
+  .choice-card .head{ font-weight:700; font-size:17px; }
+  .choice-card .sub{ font-size:13px; color: var(--text-2); margin-top:2px; }
+  .choice-card .badge{
+    position:absolute; top:-8px; right:14px;
+    background: var(--accent-pink); color:#fff; font-weight:600; font-size:11px;
+    padding: 4px 9px; border-radius: var(--r-pill);
+  }
+
+  .total-row{
+    padding: 16px 0; display:flex; justify-content:space-between; align-items:baseline;
+  }
+  .total-row .lbl{ font-weight:700; font-size:18px; }
+  .total-row .price{ font-weight:700; font-size:18px; }
+  .total-row .strike{ color: var(--text-2); text-decoration: line-through; font-weight:500; margin-right: 6px; font-size: 16px; }
+
+  /* ============== PACKAGES LANDING ============== */
+  .packages-wrap{ padding: 4px 20px 0; }
+  .big-card{
+    background: var(--bg-alt); border-radius: var(--r-card); padding: 18px 18px 22px;
+    display:flex; gap:14px; align-items:center; margin-top: 18px;
+  }
+  .big-card .tx{ flex:1; }
+  .big-card .ti{ font-weight:700; font-size:18px; }
+  .big-card .sb{ color: var(--text-2); font-size:13px; margin-top: 4px; line-height:1.3; }
+  .big-card .em{ font-size:64px; line-height:1; }
+
+  .feature-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .feature-card{
+    background: var(--bg-alt); border-radius: var(--r-card); padding: 16px 14px;
+    min-height: 170px; display:flex; flex-direction:column; justify-content:space-between;
+  }
+  .feature-card .ti{ font-weight:700; font-size:15px; line-height:1.2; }
+  .feature-card .sb{ font-size:12.5px; color: var(--text-2); margin-top:4px; line-height: 1.3; }
+  .feature-card .em{ font-size:50px; line-height:1; align-self:center; }
+
+  .faq{
+    margin-top: 26px;
+  }
+  .faq h3{ font-weight:700; font-size:18px; margin: 0 0 4px; }
+  .faq-item{
+    border-bottom: 1px solid var(--line); padding: 14px 0;
+    display:flex; align-items:center; justify-content:space-between; cursor:pointer;
+    font-weight:600; font-size:15px; gap: 12px;
+  }
+  .faq-item .chev{ color: var(--text-3); flex-shrink:0; transition: transform .2s ease; }
+  .faq-item.open .chev{ transform: rotate(180deg); }
+  .faq-answer{
+    display:none; padding: 4px 0 14px; color: var(--text-2); font-size: 14px; line-height: 1.4;
+    border-bottom: 1px solid var(--line);
+  }
+  .faq-item.open + .faq-answer{ display:block; }
+
+  /* ============== PACKAGE CONFIG ============== */
+  .cat-list{ display:flex; flex-direction:column; }
+  .cat-item{
+    display:flex; gap:14px; padding: 12px 0; align-items:center; cursor:pointer;
+  }
+  .cat-icon{
+    width:48px; height:48px; border-radius:14px; background: var(--bg-alt);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    font-size: 26px;
+  }
+  .cat-body{ flex:1; min-width:0; }
+  .cat-title{ font-weight:600; font-size:16px; }
+  .cat-sub{ font-size:13px; color: var(--text-2); margin-top: 2px; }
+  .radio-sm{
+    width:22px; height:22px; border-radius:50%; border: 1.5px solid var(--bg-alt-2);
+    flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    background: var(--bg-alt);
+    transition: all .15s ease;
+  }
+  .radio-sm.checked{ background: var(--primary); border-color: var(--primary); }
+  .radio-sm.checked::after{
+    content:""; width:7px; height:7px; border-radius:50%; background:#fff;
+  }
+
+  .count-list{ display:flex; flex-direction:column; gap: 10px; }
+  .count-card{
+    background: var(--bg-alt); border-radius: var(--r-card); padding: 18px 18px;
+    border: 2px solid transparent; cursor:pointer; position:relative;
+    transition: border-color .15s ease, background .15s ease;
+    font-weight:700; font-size: 17px;
+  }
+  .count-card.active{ border-color: var(--primary); background:#fff; }
+  .count-card .badge{
+    position:absolute; top:-8px; right:18px;
+    background: var(--accent-pink); color:#fff; font-weight:600; font-size:11px;
+    padding: 4px 9px; border-radius: var(--r-pill);
+  }
+
+  /* ============== PAYMENT SUMMARY ============== */
+  .pay-line{
+    display:flex; justify-content:space-between; gap: 16px; padding: 22px 0 0;
+    font-size: 15px; line-height: 1.4;
+  }
+  .pay-line .l{ color: var(--text); max-width: 60%; }
+  .pay-line .r{ color: var(--text); white-space: nowrap; font-weight: 500; }
+
+  .promo-input{
+    margin-top: auto;
+    background: var(--bg-alt); border:0; border-radius: var(--r-pill);
+    padding: 16px 20px; font-size: 15px; font-family: inherit; color: var(--text);
+    width: 100%; outline: none;
+  }
+  .promo-input::placeholder{ color: var(--text-2); }
+
+  .pay-summary-wrap{
+    padding: 0 20px 0; min-height: calc(100% - 60px); display:flex; flex-direction:column;
+  }
+  .pay-total{
+    display:flex; justify-content:space-between; align-items: baseline; padding: 16px 0 12px;
+    font-weight:700; font-size: 20px;
+  }
+  .terms-note{ text-align:center; color: var(--text-2); font-size: 13px; padding: 8px 16px 0; }
+
+  /* ============== PAYMENT METHOD ============== */
+  .methods{ padding: 12px 20px 0; }
+  .method-row{
+    display:flex; gap: 14px; padding: 12px 0; align-items:center; cursor:pointer;
+  }
+  .method-logo{
+    width:54px; height:54px; border-radius: 14px; display:flex; align-items:center; justify-content:center;
+    flex-shrink: 0; color:#fff; font-weight:800; font-size:14px; letter-spacing: .02em;
+  }
+  .method-logo.visa{ background: #1A1F71; }
+  .method-logo.uzcard{ background: #1B2A6B; position:relative; }
+  .method-logo.uzcard::after{ content:""; position:absolute; top:18px; right:14px; width:8px; height:8px; background:#FF7A1F; border-radius:2px;}
+  .method-logo.humo{ background:#0E4D44; font-size:13px; }
+  .method-logo.newcard{ background: var(--bg-alt); color: var(--text); }
+  .method-body{ flex:1; }
+  .method-title{ font-weight:600; font-size:16px; }
+  .method-sub{ font-size:14px; color: var(--text-2); margin-top: 2px; }
+
+  /* ============== PROCESSING ============== */
+  .processing-wrap{ display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding: 0 24px; }
+  .processing-title{ font-weight:700; font-size: 16px; margin-top: 18px; position: absolute; top: 18px; left: 0; right: 0; text-align:center; }
+  .spinner{
+    width:48px; height:48px; border-radius:50%;
+    border: 3.5px solid #EEE; border-top-color: #0A0A0A;
+    animation: spin .9s linear infinite;
+  }
+  @keyframes spin{ to{ transform: rotate(360deg);} }
+  .processing-h{ font-weight:700; font-size:24px; margin-top: 24px; }
+  .processing-s{ color: var(--text); font-size: 16px; margin-top: 12px; text-align:center; line-height:1.4; }
+
+  /* ============== SUCCESS ============== */
+  .success-wrap{ display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding: 0 32px; text-align:center; }
+  .check-circle{
+    width:96px; height:96px; border-radius:50%; background: var(--success);
+    display:flex; align-items:center; justify-content:center; color:#fff;
+    animation: pop .55s cubic-bezier(.34,1.56,.64,1) both;
+  }
+  @keyframes pop{ from { transform: scale(.4); opacity:0; } to { transform: scale(1); opacity:1; } }
+  .check-circle svg{ width:48px; height:48px; }
+  .success-h{ font-weight:700; font-size:24px; margin-top: 28px; line-height:1.2; }
+  .success-s{ color: var(--text-2); font-size:15px; margin-top: 10px; line-height:1.4; }
+
+  /* ============== MY PACKAGES ============== */
+  .pkg-active-card{
+    margin: 14px 16px 0; background: var(--bg-alt); border-radius: var(--r-card); padding: 16px;
+    position:relative;
+  }
+  .pkg-active-card .ttl{ font-weight:700; font-size:18px; padding-right: 80px; }
+  .pkg-active-card .sub{ color: var(--text-2); font-size: 14px; margin-top: 4px; padding-right: 80px; }
+  .pkg-active-card .meta{ margin-top: 14px; display:flex; flex-direction:column; gap: 6px; font-size: 14px; }
+  .pkg-active-card .meta .it{ display:flex; gap:8px; align-items:center; color: var(--text); }
+  .pkg-active-card .ring{
+    position:absolute; top: 14px; right: 14px;
+    width:54px; height:54px;
+  }
+  .ring-num{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:18px;
+  }
+
+  /* ============== CATEGORIES MODAL ============== */
+  .modal-header{ display:flex; justify-content:space-between; align-items:center; padding-bottom: 14px; }
+  .modal-header .h{ font-weight:700; font-size:24px; }
+  .search-input{
+    width:100%; background: var(--bg-alt); border:0; border-radius: var(--r-pill);
+    padding: 14px 16px 14px 44px; font-family: inherit; font-size:15px; color: var(--text); outline:none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A8A8E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
+    background-repeat: no-repeat; background-position: 14px center; background-size: 18px;
+  }
+  .chip-row{ display:flex; gap:8px; flex-wrap:wrap; padding: 14px 0 8px; }
+  .chip{
+    padding: 10px 16px; border-radius: var(--r-pill); background: var(--bg-alt);
+    border: 2px solid transparent; font-weight:500; font-size:14px; cursor:pointer;
+  }
+  .chip.active{ border-color: var(--primary); background:#fff; font-weight:600; }
+  .sheet-content{ flex:1; overflow-y:auto; padding-bottom: 16px; scrollbar-width:none; }
+  .sheet-content::-webkit-scrollbar{ display:none; }
+  .sheet-section-h{ font-weight:700; font-size: 18px; margin: 16px 0 6px; }
+  .cat-list-modal{ }
+  .cat-list-modal .cat-icon{ background: var(--bg-alt); }
+
+  /* ============== ARCHIVE LIST ============== */
+  .arch-list{ padding: 8px 16px 16px; }
+  .arch-item{
+    display:flex; gap:14px; padding: 14px 0;
+    border-bottom: 1px solid var(--line); align-items:center;
+  }
+  .arch-item:last-child{ border-bottom: 0; }
+  .arch-icon{
+    width:44px; height:44px; border-radius:12px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px;
+  }
+  .arch-body{ flex:1; min-width:0; }
+  .arch-title{ font-weight:600; font-size:15px; line-height:1.25; }
+  .arch-sub{ color: var(--text-2); font-size:13px; margin-top:2px; }
+  .arch-amount{
+    font-weight:600; font-size:15px; white-space:nowrap; color: var(--text);
+  }
+  .arch-amount.refund{ color: var(--success); }
+  .arch-amount.applied{ color: var(--text-2); font-weight:500; }
+
+  /* ============== VISVAS CHECKOUT PREVIEW ============== */
+  .visvas-preview{ margin-top: 20px; }
+  .vp-headline{
+    color: var(--text); font-weight:500; font-size: 14px;
+    line-height: 1.35; padding: 0 2px;
+  }
+  .vp-scroller{
+    display:flex; gap: 10px; align-items:center;
+    margin: 18px -20px 0; padding: 20px 20px;
+    overflow:hidden;
+  }
+  .vp-card{
+    flex-shrink:0; width: 128px; background: #F2F2F4;
+    border-radius: 16px; padding: 8px;
+    display:flex; flex-direction:column;
+  }
+  .vp-card .vp-img{
+    width:100%; height: 96px; border-radius: 10px;
+    background: linear-gradient(135deg, #DDE3EC 0%, #B0BCCC 100%);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 36px; margin-bottom: 8px;
+  }
+  .vp-card .vp-img.vp-img-lg{ height: 132px; font-size: 52px; }
+  .vp-card .vp-price{ font-weight:700; font-size: 13.5px; }
+  .vp-card .vp-name{
+    font-size: 12px; color: var(--text-2); margin-top: 2px; line-height: 1.3;
+    overflow:hidden; text-overflow:ellipsis;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  }
+  .vp-highlighted{
+    width: 168px; background: #E8F1FF;
+    padding: 10px;
+    box-shadow:
+      0 0 0 1px rgba(27,60,227,.04),
+      0 16px 36px rgba(27, 60, 227, 0.22),
+      0 4px 12px rgba(27, 60, 227, 0.10);
+    position:relative; z-index:2;
+  }
+  .vp-side{ opacity: .95; }
+  .vp-side:first-child{ margin-left: -36px; }
+  .vp-side:last-child{ margin-right: -36px; }
+
+  /* ============== INFO LANDING (Как это работает) ============== */
+  .tool-card{
+    background: var(--bg-alt); border-radius: var(--r-card);
+    overflow:hidden; margin-bottom: 14px;
+  }
+  .tool-visual{
+    height: 174px; position:relative;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  .tool-visual .big-em{
+    font-size: 72px; line-height: 1;
+    filter: drop-shadow(0 6px 16px rgba(0,0,0,.10));
+    position:relative; z-index:2;
+  }
+  .tool-visual .spark{
+    position:absolute; font-size: 20px; line-height:1;
+    color: rgba(255,255,255,.9);
+    text-shadow: 0 0 6px rgba(255,255,255,.6);
+    z-index:1;
+  }
+  .boost-bg  { background: linear-gradient(135deg, #FFE0EC 0%, #FFB8D2 100%); }
+  .visvas-bg { background: linear-gradient(135deg, #E2EBFF 0%, #BFD3FF 100%); }
+  .pkg-bg    { background: linear-gradient(135deg, #ECE4FF 0%, #CCB9FF 100%); }
+  .promo-bg  { background: linear-gradient(135deg, #FFF1D6 0%, #FFD988 100%); }
+
+  .tool-body{ padding: 18px 20px 20px; }
+  .tool-tag{
+    display:inline-block; font-weight:600;
+    font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--text-2);
+    background: #fff;
+    padding: 6px 10px; border-radius: var(--r-pill);
+    margin-bottom: 12px;
+  }
+  .tool-h{ font-weight:700; font-size: 22px; margin-bottom: 8px; letter-spacing: -.005em; line-height: 1.15; }
+  .tool-p{ color: #4A4A4F; font-size: 14.5px; line-height: 1.45; margin-bottom: 0; }
+
+  /* Expandable extra info inside a tool card */
+  .tool-extra{
+    margin-top: 14px;
+    background: #fff; border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .extra-list{
+    margin: 0; padding: 0; list-style: none;
+    display:flex; flex-direction:column; gap: 9px;
+  }
+  .extra-list li{
+    position:relative; padding-left: 16px;
+    font-size: 13.5px; line-height: 1.4; color: #3F3F44;
+  }
+  .extra-list li::before{
+    content: ""; position:absolute; left: 4px; top: 8px;
+    width: 4px; height: 4px; border-radius: 50%;
+    background: var(--text-2);
+  }
+
+  /* Actions row: read-more link + compact CTA */
+  .tool-actions{
+    margin-top: 18px;
+    display:flex; flex-direction: column;
+    align-items: flex-start; gap: 12px;
+  }
+  .read-more{
+    display:inline-flex; align-items:center; gap: 6px;
+    font-weight: 600; font-size: 14px;
+    color: var(--text);
+    cursor:pointer; user-select:none;
+    padding: 2px 0;
+  }
+  .rm-chev{
+    width: 14px; height: 14px;
+    transition: transform .2s ease;
+  }
+  .read-more.open .rm-chev{ transform: rotate(180deg); }
+
+  .btn-compact{
+    display:inline-flex; align-items:center; justify-content:center;
+    height: 42px; padding: 0 22px;
+    border-radius: 12px;
+    background: var(--primary); color: #fff;
+    font-weight: 600; font-size: 14.5px;
+    border: 0; font-family: inherit;
+    cursor: pointer;
+    transition: background .15s ease, transform .1s ease;
+  }
+  .btn-compact:active{ background: var(--primary-press); transform: scale(.98); }
+
+  /* VisVas mini preview */
+  .mini-card{
+    width: 158px; background: #fff; border-radius: 14px; padding: 10px;
+    box-shadow: 0 18px 36px rgba(27,60,227,.20), 0 4px 10px rgba(27,60,227,.08);
+  }
+  .mini-img{
+    width:100%; height: 96px; border-radius: 8px;
+    background: linear-gradient(135deg, #DDE3EC, #B0BCCC);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 42px; margin-bottom: 8px;
+  }
+  .mini-price{ font-weight:700; font-size: 13px; }
+  .mini-name{ font-size: 11.5px; color: var(--text-2); margin-top: 2px; }
+
+  /* Packages stacked cards */
+  .pkg-stack{ position:relative; width: 150px; height: 110px; }
+  .pkg-stack-item{
+    position:absolute; width: 110px; height: 80px;
+    border-radius: 10px;
+    box-shadow: 0 6px 14px rgba(0,0,0,.10);
+  }
+  .pkg-stack-item:nth-child(1){
+    top: 0; left: 4px; transform: rotate(-8deg);
+    background: linear-gradient(135deg, #FFFFFF, #F4F0FF);
+  }
+  .pkg-stack-item:nth-child(2){
+    top: 14px; left: 20px; transform: rotate(2deg);
+    background: linear-gradient(135deg, #FFFFFF, #ECE0FF);
+  }
+  .pkg-stack-item:nth-child(3){
+    top: 28px; left: 36px; transform: rotate(10deg);
+    background: linear-gradient(135deg, #FFFFFF, #E0D0FF);
+  }
+
+  /* Promo ticket */
+  .ticket{
+    width: 170px; height: 92px; background: #fff;
+    border-radius: 12px; position:relative;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 10px 22px rgba(0,0,0,.10);
+  }
+  .ticket-perc{
+    font-weight: 800; font-size: 48px; color: #E11D74; line-height: 1;
+  }
+  .ticket-tear{
+    position:absolute; top: 50%; transform: translateY(-50%);
+    width: 18px; height: 18px; border-radius: 50%;
+    background: #FFE3A8;
+  }
+  .ticket-tear-l{ left: -9px; }
+  .ticket-tear-r{ right: -9px; }
+  .ticket-dash{
+    position:absolute; top:50%; left: 18px; right: 18px;
+    height: 2px;
+    background-image: linear-gradient(90deg, #E6E6EA 50%, transparent 50%);
+    background-size: 8px 2px;
+    transform: translateY(-50%);
+  }
+
+  /* ============== STORIES LINK on info-landing ============== */
+  .stories-link{
+    margin: 4px 0 0;
+    padding: 18px 20px;
+    background: var(--bg-alt);
+    border-radius: var(--r-card);
+    display:flex; align-items:center; justify-content:space-between;
+    cursor:pointer; gap: 12px;
+  }
+  .stories-link .sl-body{ display:flex; align-items:center; gap: 14px; flex:1; }
+  .stories-link .sl-em{ font-size: 28px; line-height: 1; flex-shrink: 0; }
+  .stories-link .sl-h{ font-weight: 700; font-size: 16px; }
+  .stories-link .sl-s{ font-size: 13px; color: var(--text-2); margin-top: 2px; line-height: 1.3; }
+  .stories-link .sl-chev{ color: var(--text-3); flex-shrink:0; }
+
+  /* ============== STORIES SCREEN ============== */
+  .story-card{
+    background: var(--bg-alt); border-radius: var(--r-card);
+    padding: 18px; margin-bottom: 12px;
+  }
+  .story-head{ display:flex; gap:12px; align-items:center; }
+  .story-avatar{
+    width:46px; height:46px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size: 18px; color: #fff;
+  }
+  .story-av-blue{   background: linear-gradient(135deg, #6B8AF7 0%, #1B3CE3 100%); }
+  .story-av-pink{   background: linear-gradient(135deg, #FF7DB3 0%, #E0247E 100%); }
+  .story-av-purple{ background: linear-gradient(135deg, #B49AFF 0%, #7C3AED 100%); }
+  .story-av-green{  background: linear-gradient(135deg, #5BE39A 0%, #16A34A 100%); }
+  .story-name{ font-weight: 600; font-size: 15px; }
+  .story-meta{ color: var(--text-2); font-size: 13px; margin-top: 1px; }
+  .story-quote{
+    margin-top: 16px;
+    font-size: 15px; line-height: 1.45; color: var(--text);
+  }
+  .story-stats{
+    margin-top: 14px;
+    background: #fff; border-radius: 14px;
+    padding: 14px 16px;
+    display:grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .story-stat .v{
+    font-weight:700; font-size: 20px; color: var(--text); line-height: 1.1;
+    letter-spacing: -.01em;
+  }
+  .story-stat .l{
+    font-size: 12px; color: var(--text-2); margin-top: 3px; line-height: 1.25;
+  }
+  .story-tag{
+    display:inline-flex; align-items:center; gap: 6px;
+    margin-top: 14px;
+    background: #fff; padding: 8px 12px;
+    border-radius: var(--r-pill);
+    font-weight: 500; font-size: 13px;
+  }
+
+  /* ============== HINT (How-to) SCREEN ============== */
+  .hint-visual{
+    background: var(--bg-alt); border-radius: var(--r-card);
+    padding: 16px;
+    position: relative;
+  }
+  .hv-header{
+    font-weight:500; font-size: 13px; color: var(--text);
+    margin-bottom: 12px; display:flex; align-items:center; gap: 6px;
+  }
+  .hv-header .arr{ color: var(--text-2); }
+  .hv-item{
+    background: #fff; border-radius: 12px;
+    padding: 10px 12px;
+    display:flex; gap:12px; align-items:center;
+    margin-bottom: 8px;
+    border: 2px solid transparent;
+  }
+  .hv-item.hl{ border-color: var(--primary); position: relative; z-index: 1; }
+  .hv-thumb{
+    width: 38px; height: 38px;
+    background: linear-gradient(135deg, #E6E6EA, #D2D2D6);
+    border-radius: 8px; flex-shrink: 0;
+  }
+  .hv-body{ flex: 1; min-width: 0; }
+  .hv-name{ font-weight:600; font-size: 13.5px; }
+  .hv-price{ font-size: 12px; color: var(--text-2); margin-top: 2px; }
+  .hv-kebab{ color: var(--primary); font-size: 18px; padding: 0 4px; letter-spacing: 1px; }
+  .hv-popover{
+    margin: 4px 0 0 38px;
+    background: #fff; border-radius: 12px;
+    box-shadow: 0 10px 28px rgba(0,0,0,.15), 0 2px 4px rgba(0,0,0,.04);
+    overflow: hidden;
+    width: 64%;
+  }
+  .hv-popover-item{
+    padding: 12px 16px; font-size: 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .hv-popover-item:last-child{ border-bottom: 0; }
+  .hv-popover-item.active{
+    background: #FFF4C2; color: #8B6914; font-weight: 600;
+  }
+
+  .steps{ display:flex; flex-direction: column; gap: 14px; margin-top: 24px; }
+  .step{ display:flex; gap: 14px; align-items: flex-start; }
+  .step-num{
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--primary); color: #fff;
+    display:flex; align-items:center; justify-content:center;
+    font-weight: 700; font-size: 13px; flex-shrink: 0;
+  }
+  .step-txt{ font-size: 15px; line-height: 1.4; padding-top: 3px; flex: 1; }
+
+  /* ============== MY LISTINGS SCREEN ============== */
+  .ml-item{
+    display:flex; gap:14px; padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+    align-items:center;
+  }
+  .ml-item:last-child{ border-bottom: 0; }
+  .ml-thumb{
+    width: 72px; height: 72px; border-radius: 12px; flex-shrink:0;
+    background-size: cover; background-position: center; background-color: #EFEFF1;
+    position:relative; overflow:hidden;
+  }
+  .ml-thumb.ml-plates{ background: linear-gradient(135deg, #F6E8C8 0%, #DCC4A0 100%); }
+  .ml-thumb.ml-iphone{ background: linear-gradient(135deg,#7C7B82 0%, #3F3D45 100%); }
+  .ml-thumb.ml-shoe{   background: linear-gradient(135deg, #B6CCE2 0%, #6E839A 100%); }
+  .ml-thumb.ml-teapot{ background: linear-gradient(135deg, #FFCDB2 0%, #C95B3A 100%); }
+  .ml-thumb-em{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size: 32px;
+  }
+  .ml-body{ flex:1; min-width:0; }
+  .ml-title{ font-weight:500; font-size: 15px; line-height: 1.25;
+    overflow:hidden; text-overflow:ellipsis; white-space: nowrap;
+  }
+  .ml-price{ font-weight:700; font-size: 15px; margin-top: 4px; }
+  .ml-kebab{
+    flex-shrink:0; padding: 6px 4px; cursor:pointer;
+    color: var(--text-2);
+  }
+
+  /* ============== KEBAB ACTION SHEET ============== */
+  .action-sheet-row{
+    display:flex; gap: 14px; align-items:center;
+    padding: 16px 6px;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer; font-size: 16px;
+  }
+  .action-sheet-row:last-of-type{ border-bottom: 0; }
+  .action-sheet-row .ic{ width: 24px; height: 24px; display:flex; align-items:center; justify-content:center; color: var(--text); }
+  .action-sheet-row .lbl{ flex: 1; }
+  .action-sheet-row.primary .lbl{ color: var(--primary); font-weight: 600; }
+  .action-sheet-row.danger .lbl{ color: #E45050; }
+
+  .sheet-item-preview{
+    background: var(--bg-alt); border-radius: 12px;
+    padding: 10px; display:flex; gap: 12px; align-items:center;
+    margin-bottom: 4px;
+  }
+  .sheet-item-preview .ml-thumb{ width: 48px; height: 48px; border-radius: 10px; }
+  .sheet-item-preview .ml-thumb-em{ font-size: 22px; }
+  .sheet-item-preview .ml-title{ font-size: 14px; white-space: normal; }
+  .sheet-item-preview .ml-price{ font-size: 13px; font-weight: 600; margin-top: 2px; }
+
+  /* ============== SERVICE SELECTOR ============== */
+  .service-card{
+    background: var(--bg-alt); border-radius: var(--r-card);
+    padding: 16px; display:flex; gap: 14px; align-items:center;
+    margin-bottom: 10px; cursor: pointer; position: relative;
+    transition: transform .12s ease, background .15s ease;
+  }
+  .service-card:active{ transform: scale(.985); }
+  .service-card.disabled{ opacity: .55; cursor: not-allowed; }
+  .service-card.disabled:active{ transform: none; }
+  .service-card .em{ font-size: 32px; flex-shrink: 0; line-height: 1; }
+  .service-card .body{ flex: 1; min-width: 0; }
+  .service-card .ti{ font-weight: 700; font-size: 16px; }
+  .service-card .sb{ color: var(--text-2); font-size: 13px; line-height: 1.3; margin-top: 2px; }
+  .service-card .price{ font-weight: 700; font-size: 14px; color: var(--text); white-space: nowrap; }
+  .service-card .unavail{
+    color: #E45050; font-size: 12px; font-weight: 500;
+    background: #FCE8E8; padding: 4px 8px; border-radius: var(--r-pill);
+    white-space: nowrap;
+  }
+
+  /* misc */
+  .hidden{ display:none !important; }
+
+  /* responsive: shrink device on small screens */
+  @media (max-width: 460px) {
+    body{ padding: 0; background: #fff; }
+    .device{ width: 100vw; height: 100vh; border-radius: 0; box-shadow:none; }
+    .device::before{ display:none; }
+    .home-indicator{ display:none; }
+    .stage-title{ display:none; }
+    .stage{ gap: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="stage-title">Promo 2.0 — v1 · Через Мои объявления</div>
+
+  <div class="device" id="device">
+    <!-- Status Bar -->
+    <div class="statusbar">
+      <div class="time">
+        <span>12:22</span>
+        <span class="arrow-sent">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+        </span>
+      </div>
+      <div class="right">
+        <span class="sig-icon">
+          <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="9" width="3" height="3" rx=".5"/><rect x="5" y="6" width="3" height="6" rx=".5"/><rect x="10" y="3" width="3" height="9" rx=".5"/><rect x="15" y="0" width="3" height="12" rx=".5"/></svg>
+        </span>
+        <span class="wifi-icon">
+          <svg width="18" height="14" viewBox="0 0 24 18" fill="currentColor"><path d="M12 4.5C16.97 4.5 21.5 6.43 24 9.34l-2.06 2.06A14.94 14.94 0 0012 7.5c-3.86 0-7.36 1.4-9.94 3.9L0 9.34C2.5 6.43 7.03 4.5 12 4.5zm0 6c2.94 0 5.61 1.13 7.61 2.98l-2.07 2.07A8.96 8.96 0 0012 13.5c-2.18 0-4.18.78-5.74 2.05L4.2 13.48C6.4 11.63 9.06 10.5 12 10.5zm0 6c1.39 0 2.65.5 3.64 1.34L12 21l-3.64-3.16A5.49 5.49 0 0112 16.5z"/></svg>
+        </span>
+        <span class="batt-icon">
+          <svg width="28" height="13" viewBox="0 0 28 13" fill="none"><rect x="1" y="1" width="22" height="11" rx="3" stroke="currentColor" stroke-opacity=".4"/><rect x="3" y="3" width="18" height="7" rx="1.5" fill="currentColor"/><rect x="24" y="4" width="2" height="5" rx="1" fill="currentColor" opacity=".4"/></svg>
+        </span>
+      </div>
+    </div>
+
+    <!-- Screen Stack -->
+    <div class="screens" id="screens">
+
+      <!-- ========================================= SCREEN: PROFILE ========================================= -->
+      <div class="screen active" data-screen="profile">
+        <div class="profile-wrap">
+
+          <div class="topbar-bell">
+            <button class="icon-btn" aria-label="Уведомления">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 003.4 0"/></svg>
+            </button>
+          </div>
+
+          <div class="avatar">A</div>
+          <div class="name">Aleksandra Koroleva</div>
+          <div class="rating">
+            <span class="star">★</span>
+            <span>5,0</span>
+            <span class="sep">·</span>
+            <span class="reviews">16 отзывов</span>
+          </div>
+
+          <div class="duo-cards">
+            <div class="info-card">
+              <div class="hd">15 550 <span style="font-size:18px;">💎</span></div>
+              <div class="sb">Для розыгрыша</div>
+            </div>
+            <div class="info-card">
+              <div class="hd" style="font-size:15px;">Приглашайте друзей</div>
+              <div class="sb">И выигрывайте призы</div>
+            </div>
+          </div>
+
+          <div class="seller-card">
+            <div class="seller-thumb"></div>
+            <div class="text">
+              <div class="title">Продавец собирает</div>
+              <div class="sub">Отправит до 15 марта</div>
+            </div>
+          </div>
+
+          <div class="menu-list">
+            <div class="menu-item">
+              <div class="ic">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="13" height="13" rx="2"/><path d="M16 19a2 2 0 01-2 2H5a2 2 0 01-2-2V10a2 2 0 012-2h1"/></svg>
+              </div>
+              <div class="lbl">Мои объявления</div>
+            </div>
+            <div class="menu-item">
+              <div class="ic">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+              </div>
+              <div class="lbl">Заказы</div>
+            </div>
+            <div class="menu-item highlighted" onclick="go('promo-hub')">
+              <div class="ic">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+              </div>
+              <div class="lbl">Промо</div>
+            </div>
+            <div class="menu-item">
+              <div class="ic">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+              <div class="lbl">Управление профилем</div>
+            </div>
+            <div class="menu-item">
+              <div class="ic">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+              </div>
+              <div class="lbl">Настройки</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ========================================= SCREEN: PROMO HUB ========================================= -->
+      <div class="screen" data-screen="promo-hub">
+        <div class="nav">
+          <button class="icon-btn" onclick="go('profile')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+          <div class="title">Продвижение</div>
+          <div class="spacer-r"></div>
+        </div>
+
+        <div class="promo-grid-2">
+          <div class="promo-card" onclick="go('how-to')">
+            <div class="emoji">🚀</div>
+            <div class="ttl">Подключить продвижение</div>
+            <div class="desc">Буст, выделение цветом, реклама в&nbsp;Telegram</div>
+          </div>
+          <div class="promo-card" onclick="go('packages-landing')">
+            <div class="badge-pink">−50%</div>
+            <div class="emoji">📦</div>
+            <div class="ttl">Пакеты публикаций</div>
+            <div class="desc">Размещайте объявления выгоднее</div>
+          </div>
+        </div>
+
+        <div class="info-row" onclick="go('info-landing')">
+          <div class="em">🔥</div>
+          <div class="tx">Как увеличить продажи<br/>за счёт повышения просмотров</div>
+          <div class="chev">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <div class="tab active" onclick="switchTab(this,'promo-hub-tab','active')">Сейчас продвигаются</div>
+          <div class="tab" onclick="switchTab(this,'promo-hub-tab','archive')">Архив</div>
+        </div>
+
+        <div data-tab-group="promo-hub-tab" data-tab="active">
+          <!-- Item 1: expiring soon -->
+          <div class="item-row">
+            <div class="item-thumb iphone">
+              <div class="item-thumb-em">📱</div>
+            </div>
+            <div class="item-body">
+              <div class="item-title">iPhone 14 pro max 256</div>
+              <div class="item-price">14 900 000 UZS</div>
+              <div class="item-status expiring">🚀 Осталось 3 дня</div>
+              <div class="item-stats">
+                <span class="item-stat">👁 75 <span class="delta up">+13</span></span>
+                <span class="item-stat">👤 10 <span class="delta up">+3</span></span>
+                <span class="item-stat">♡ 27 <span class="delta up">+2</span></span>
+              </div>
+            </div>
+            <div class="item-menu">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="6" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="18" r="1.5"/></svg>
+            </div>
+          </div>
+
+          <div class="upsell-bubble">В этой категории никто не выделяет объявления цветом — станьте первым</div>
+
+          <!-- Item 2 -->
+          <div class="item-row">
+            <div class="item-thumb plate">
+              <div class="item-thumb-em">🍽️</div>
+            </div>
+            <div class="item-body">
+              <div class="item-title">Набор фарфоровых тарелок</div>
+              <div class="item-price">850 000 UZS</div>
+              <div class="item-status visvas">🎨 Продвигается</div>
+              <div class="item-stats">
+                <span class="item-stat">👁 55 <span class="delta up">+23</span></span>
+                <span class="item-stat">👤 3 <span class="delta up">+2</span></span>
+                <span class="item-stat">♡ 25 <span class="delta up">+9</span></span>
+              </div>
+            </div>
+            <div class="item-menu">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="6" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="18" r="1.5"/></svg>
+            </div>
+          </div>
+
+          <!-- Item 3 -->
+          <div class="item-row">
+            <div class="item-thumb shoe">
+              <div class="item-thumb-em">👟</div>
+            </div>
+            <div class="item-body">
+              <div class="item-title">Кроссовки Salomon Gore Tex</div>
+              <div class="item-price">1 502 000 UZS</div>
+              <div class="item-status boost">⚡ Продвигается</div>
+              <div class="item-stats">
+                <span class="item-stat">👁 55 <span class="delta up">+23</span></span>
+                <span class="item-stat">👤 3 <span class="delta up">+2</span></span>
+                <span class="item-stat">♡ 25 <span class="delta up">+9</span></span>
+              </div>
+            </div>
+            <div class="item-menu">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="6" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="18" r="1.5"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div data-tab-group="promo-hub-tab" data-tab="archive" class="hidden">
+          <div class="arch-list">
+            <div class="arch-item">
+              <div class="arch-icon" style="background: #FFEEF5;">⚡</div>
+              <div class="arch-body">
+                <div class="arch-title">Буст — 7 дней</div>
+                <div class="arch-sub">22 мая · Visa •• 0723</div>
+              </div>
+              <div class="arch-amount">−5 000 UZS</div>
+            </div>
+            <div class="arch-item">
+              <div class="arch-icon" style="background: #EEF1FF;">🎁</div>
+              <div class="arch-body">
+                <div class="arch-title">Промокод BOOST20</div>
+                <div class="arch-sub">18 мая · −20% на буст</div>
+              </div>
+              <div class="arch-amount applied">Применён</div>
+            </div>
+            <div class="arch-item">
+              <div class="arch-icon" style="background: #F1ECFF;">📦</div>
+              <div class="arch-body">
+                <div class="arch-title">Пакет из 10 публикаций</div>
+                <div class="arch-sub">12 мая · Visa •• 0723</div>
+              </div>
+              <div class="arch-amount">−9 000 UZS</div>
+            </div>
+            <div class="arch-item">
+              <div class="arch-icon" style="background: #E6F8EF;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2ECC71" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+              </div>
+              <div class="arch-body">
+                <div class="arch-title">Возврат: Реклама в Telegram</div>
+                <div class="arch-sub">8 мая</div>
+              </div>
+              <div class="arch-amount refund">+5 000 UZS</div>
+            </div>
+            <div class="arch-item">
+              <div class="arch-icon" style="background: #FFF2E6;">🎨</div>
+              <div class="arch-body">
+                <div class="arch-title">Выделение цветом — 7 дней</div>
+                <div class="arch-sub">5 мая · Uzcard •• 4521</div>
+              </div>
+              <div class="arch-amount">−3 500 UZS</div>
+            </div>
+            <div class="arch-item">
+              <div class="arch-icon" style="background: #EEF1FF;">🎁</div>
+              <div class="arch-body">
+                <div class="arch-title">Промокод WELCOME10</div>
+                <div class="arch-sub">1 мая · −10% на первую покупку</div>
+              </div>
+              <div class="arch-amount applied">Применён</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cta-dock">
+          <button class="btn" onclick="go('how-to')">Продвигать объявление</button>
+        </div>
+      </div>
+
+      <!-- ========================================= SCREEN: INFO LANDING ========================================= -->
+      <div class="screen" data-screen="info-landing">
+        <div class="nav">
+          <button class="icon-btn" onclick="go('promo-hub')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+          <div class="title"></div>
+          <button class="icon-btn" onclick="go('promo-hub')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <div style="padding: 4px 20px 22px;">
+          <div class="h1">Как увеличить<br/>продажи</div>
+          <div class="subtle" style="margin-top:10px;">Расскажем про инструменты, которые помогают объявлению быстрее найти покупателя</div>
+        </div>
+
+        <div style="padding: 0 16px 16px;">
+
+          <!-- BOOST -->
+          <div class="tool-card">
+            <div class="tool-visual boost-bg">
+              <span class="spark" style="top:18%; left:18%;">✦</span>
+              <span class="spark" style="top:32%; right:20%; font-size:14px;">✦</span>
+              <span class="spark" style="bottom:24%; left:28%; font-size:16px;">✦</span>
+              <span class="spark" style="bottom:18%; right:24%;">✦</span>
+              <div class="big-em">⚡</div>
+            </div>
+            <div class="tool-body">
+              <div class="tool-tag">Просмотры × 40</div>
+              <div class="tool-h">Буст</div>
+              <div class="tool-p">Регулярно поднимаем объявление в&nbsp;ленте и&nbsp;поисковой выдаче в&nbsp;течение всего срока. Особенно эффективно для популярных категорий.</div>
+              <div class="tool-extra hidden">
+                <ul class="extra-list">
+                  <li>Алгоритм поднимает объявление в&nbsp;выдаче несколько раз в&nbsp;день</li>
+                  <li>Эффект сохраняется на&nbsp;протяжении всего срока буста</li>
+                  <li>Лучше всего работает в&nbsp;популярных категориях — Электроника, Авто, Недвижимость</li>
+                  <li>Можно совмещать с&nbsp;выделением цветом</li>
+                </ul>
+              </div>
+              <div class="tool-actions">
+                <div class="read-more" onclick="toggleExtra(this)">
+                  <span class="rm-text">Читать подробнее</span>
+                  <svg class="rm-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <button class="btn-compact" onclick="go('how-to')">Подключить буст</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- VISVAS -->
+          <div class="tool-card">
+            <div class="tool-visual visvas-bg">
+              <div class="mini-card">
+                <div class="mini-img"><span>👟</span></div>
+                <div class="mini-price">2 538 560 UZS</div>
+                <div class="mini-name">Кроссовки Salomon XT-6</div>
+              </div>
+            </div>
+            <div class="tool-body">
+              <div class="tool-tag">Просмотры × 2</div>
+              <div class="tool-h">Выделение цветом</div>
+              <div class="tool-p">Карточка получает заметный голубой фон в&nbsp;ленте и&nbsp;выделяется среди соседей. Помогает в&nbsp;насыщенных категориях.</div>
+              <div class="tool-extra hidden">
+                <ul class="extra-list">
+                  <li>Карточка получает голубой фон в&nbsp;общей ленте</li>
+                  <li>Особенно эффективно в&nbsp;насыщенных категориях — Одежда, Аксессуары</li>
+                  <li>Заметность сохраняется на&nbsp;весь срок действия услуги</li>
+                  <li>Совет: совмещайте с&nbsp;бустом для максимального эффекта</li>
+                </ul>
+              </div>
+              <div class="tool-actions">
+                <div class="read-more" onclick="toggleExtra(this)">
+                  <span class="rm-text">Читать подробнее</span>
+                  <svg class="rm-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <button class="btn-compact" onclick="go('how-to')">Выделить цветом</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- PACKAGES -->
+          <div class="tool-card">
+            <div class="tool-visual pkg-bg">
+              <div class="pkg-stack">
+                <div class="pkg-stack-item"></div>
+                <div class="pkg-stack-item"></div>
+                <div class="pkg-stack-item"></div>
+              </div>
+            </div>
+            <div class="tool-body">
+              <div class="tool-tag">Дешевле до 50%</div>
+              <div class="tool-h">Пакеты публикаций</div>
+              <div class="tool-p">Оплачиваете публикации заранее со&nbsp;скидкой. Пакет действует 120 дней — размещайте объявления когда удобно.</div>
+              <div class="tool-extra hidden">
+                <ul class="extra-list">
+                  <li>Скидка растёт с&nbsp;размером пакета — от&nbsp;20% до&nbsp;50%</li>
+                  <li>Категория фиксируется после первой публикации из&nbsp;пакета</li>
+                  <li>Срок публикации задаётся отдельно для каждого объявления</li>
+                  <li>Остаток публикаций и&nbsp;срок действия — в&nbsp;разделе «Мои пакеты»</li>
+                </ul>
+              </div>
+              <div class="tool-actions">
+                <div class="read-more" onclick="toggleExtra(this)">
+                  <span class="rm-text">Читать подробнее</span>
+                  <svg class="rm-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+                <button class="btn-compact" onclick="go('packages-landing')">Купить пакет</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- PROMOCODES -->
+          <div class="tool-card">
+            <div class="tool-visual promo-bg">
+              <div class="ticket">
+                <div class="ticket-tear ticket-tear-l"></div>
+                <div class="ticket-tear ticket-tear-r"></div>
+                <div class="ticket-dash"></div>
+                <div class="ticket-perc">%</div>
+              </div>
+            </div>
+            <div class="tool-body">
+              <div class="tool-tag">Скидка от платформы</div>
+              <div class="tool-h">Промокоды</div>
+              <div class="tool-p">Получайте коды в&nbsp;рассылках, акциях и&nbsp;соцсетях платформы. На&nbsp;экране оплаты введите код в&nbsp;поле «Промокод» — скидка применится автоматически.</div>
+              <div class="tool-extra hidden">
+                <ul class="extra-list">
+                  <li>Один промокод применяется только один раз</li>
+                  <li>Промокоды не&nbsp;комбинируются между собой</li>
+                  <li>Срок действия указан в&nbsp;описании промокода</li>
+                  <li>Полная история применений — в&nbsp;Архиве</li>
+                </ul>
+              </div>
+              <div class="tool-actions">
+                <div class="read-more" onclick="toggleExtra(this)">
+                  <span class="rm-text">Читать подробнее</span>
+                  <svg class="rm-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Link to seller stories -->
+          <div class="stories-link" onclick="go('stories')">
+            <div class="sl-body">
+              <div class="sl-em">💬</div>
+              <div>
+                <div class="sl-h">Опыт продавцов</div>
+                <div class="sl-s">Истории, как селлеры эффективно настроили продвижение</div>
+              </div>
+            </div>
+            <div class="sl-chev">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ========================================= SCREEN: STORIES ========================================= -->
+      <div class="screen" data-screen="stories">
+        <div class="nav">
+          <button class="icon-btn" onclick="go('info-landing')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+          <div class="title">Опыт продавцов</div>
+          <div class="spacer-r"></div>
+        </div>
+
+        <div style="padding: 4px 20px 22px;">
+          <div class="h1">Как селлеры<br/>продают быстрее</div>
+          <div class="subtle" style="margin-top:10px;">Реальные истории о&nbsp;том, как инструменты Промо помогают продавать на&nbsp;платформе</div>
+        </div>
+
+        <div style="padding: 0 16px 24px;">
+
+          <div class="story-card">
+            <div class="story-head">
+              <div class="story-avatar story-av-blue">B</div>
+              <div>
+                <div class="story-name">Bahodir A.</div>
+                <div class="story-meta">Продаёт смартфоны · Ташкент</div>
+              </div>
+            </div>
+            <div class="story-quote">«Раньше iPhone висел по&nbsp;2–3 недели. Подключил буст на&nbsp;14 дней — покупатель нашёлся за&nbsp;4&nbsp;дня».</div>
+            <div class="story-stats">
+              <div class="story-stat">
+                <div class="v">+180%</div>
+                <div class="l">просмотров</div>
+              </div>
+              <div class="story-stat">
+                <div class="v">4 дня</div>
+                <div class="l">до продажи</div>
+              </div>
+            </div>
+            <div class="story-tag">⚡ Буст</div>
+          </div>
+
+          <div class="story-card">
+            <div class="story-head">
+              <div class="story-avatar story-av-pink">M</div>
+              <div>
+                <div class="story-name">Madina K.</div>
+                <div class="story-meta">Брендовая одежда · Самарканд</div>
+              </div>
+            </div>
+            <div class="story-quote">«В категории много объявлений, без выделения теряешься. Включила цвет — стало приходить в&nbsp;3&nbsp;раза больше сообщений».</div>
+            <div class="story-stats">
+              <div class="story-stat">
+                <div class="v">×3</div>
+                <div class="l">сообщений</div>
+              </div>
+              <div class="story-stat">
+                <div class="v">+210%</div>
+                <div class="l">просмотров</div>
+              </div>
+            </div>
+            <div class="story-tag">🎨 Выделение цветом</div>
+          </div>
+
+          <div class="story-card">
+            <div class="story-head">
+              <div class="story-avatar story-av-purple">O</div>
+              <div>
+                <div class="story-name">Otabek S.</div>
+                <div class="story-meta">Магазин электроники · Бухара</div>
+              </div>
+            </div>
+            <div class="story-quote">«Каждый месяц публикую 25–30 новых позиций. Взял пакет на&nbsp;30 публикаций — экономия 35%, не&nbsp;нужно платить за&nbsp;каждую отдельно».</div>
+            <div class="story-stats">
+              <div class="story-stat">
+                <div class="v">−35%</div>
+                <div class="l">к&nbsp;расходам</div>
+              </div>
+              <div class="story-stat">
+                <div class="v">30</div>
+                <div class="l">публикаций в&nbsp;месяц</div>
+              </div>
+            </div>
+            <div class="story-tag">📦 Пакеты публикаций</div>
+          </div>
+
+          <div class="story-card">
+            <div class="story-head">
+              <div class="story-avatar story-av-green">A</div>
+              <div>
+                <div class="story-name">Aziza N.</div>
+                <div class="story-meta">Риелтор · Ташкент</div>
+              </div>
+            </div>
+            <div class="story-quote">«Подписана на&nbsp;канал платформы — оттуда забираю промокоды. Скидка 20% на&nbsp;буст экономит около 1&nbsp;000 UZS с&nbsp;каждого продвижения».</div>
+            <div class="story-stats">
+              <div class="story-stat">
+                <div class="v">−20%</div>
+                <div class="l">на&nbsp;каждый буст</div>
+              </div>
+              <div class="story-stat">
+                <div class="v">5–7</div>
+                <div class="l">промо в&nbsp;неделю</div>
+              </div>
+            </div>
+            <div class="story-tag">🎁 Промокоды</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ========================================= SCREEN: HOW-TO (hint) ========================================= -->
+      <div class="screen" data-screen="how-to">
+        <div class="nav">
+          <button class="icon-btn" onclick="go('promo-hub')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+          <div class="title">Как продвинуть</div>
+          <button class="icon-btn" onclick="go('promo-hub')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <div style="padding: 4px 20px 18px;">
+          <div class="subtle">Откройте «Мои объявления», нажмите&nbsp;⋯ на&nbsp;нужном объявлении и&nbsp;выберите «Продвигать».</div>
+        </div>
+
+        <div style="padding: 0 16px;">
+          <div class="hint-visual">
+            <div class="hv-header">
+              Мои объявления <span class="arr">→</span> Активные
+            </div>
+            <div class="hv-item">
+              <div class="hv-thumb" style="background: linear-gradient(135deg, #B6CCE2 0%, #6E839A 100%);"></div>
+              <div class="hv-body">
+                <div class="hv-name">Кроссовки Salomon</div>
+                <div class="hv-price">2 538 560 UZS</div>
+              </div>
+            </div>
+            <div class="hv-item hl">
+              <div class="hv-thumb" style="background: linear-gradient(135deg,#7C7B82 0%, #3F3D45 100%);"></div>
+              <div class="hv-body">
+                <div class="hv-name">iPhone 14 pro max</div>
+                <div class="hv-price">14 900 000 UZS</div>
+              </div>
+              <div class="hv-kebab">•••</div>
+            </div>
+            <div class="hv-popover">
+              <div class="hv-popover-item">Редактировать</div>
+              <div class="hv-popover-item active">Продвигать</div>
+              <div class="hv-popover-item">Снять с публикации</div>
+            </div>
+          </div>
+
+          <div class="steps">
+            <div class="step">
+              <div class="step-num">1</div>
+              <div class="step-txt">Перейдите в&nbsp;«Мои объявления»</div>
+            </div>
+            <div class="step">
+              <div class="step-num">2</div>
+              <div class="step-txt">Нажмите на&nbsp;⋯ рядом с&nbsp;объявлением</div>
+            </div>
+            <div class="step">
+              <div class="step-num">3</div>
+              <div class="step-txt">Выберите «Продвигать» — откроется витрина услуг</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cta-dock">
+          <button class="btn" onclick="go('my-listings')">Перейти в Мои объявления</button>
+        </div>
+      </div>
+
+      <!-- ========================================= SCREEN: MY LISTINGS ========================================= -->
+      <div class="screen" data-screen="my-listings">
+        <div class="nav">
+          <button class="icon-btn" onclick="go('how-to')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+          <div class="title">Мои объявления</div>
+          <div class="spacer-r"></div>
+        </div>
+
+        <div class="tabs">
+          <div class="tab" onclick="switchTab(this,'ml-tab','waiting')">Ждут действий<span class="count">2</span></div>
+          <div class="tab active" onclick="switchTab(this,'ml-tab','active')">Активные<span class="count">4</span></div>
+          <div class="tab" onclick="switchTab(this,'ml-tab','archive')">Архив<span class="count">3</span></div>
+        </div>
+
+        <div data-tab-group="ml-tab" data-tab="active">
+          <div class="ml-item" onclick="openKebab(0)">
+            <div class="ml-thumb ml-plates"><div class="ml-thumb-em">🍽️</div></div>
+            <div class="ml-body">
+              <div class="ml-title">Набор фарфоровых та...</div>
+              <div class="ml-price">850 000 UZS</div>
+            </div>
+            <div class="ml-kebab" onclick="event.stopPropagation(); openKebab(0)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="6" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="18" r="1.6"/></svg>
+            </div>
+          </div>
+
+          <div class="ml-item" onclick="openKebab(1)">
+            <div class="ml-thumb ml-iphone"><div class="ml-thumb-em">📱</div></div>
+            <div class="ml-body">
+              <div class="ml-title">iPhone 14 pro max 256</div>
+              <div class="ml-price">14 900 000 UZS</div>
+            </div>
+            <div class="ml-kebab" onclick="event.stopPropagation(); openKebab(1)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="6" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="18" r="1.6"/></svg>
+            </div>
+          </div>
+
+          <div class="ml-item" onclick="openKebab(2)">
+            <div class="ml-thumb ml-shoe"><div class="ml-thumb-em">👟</div></div>
+            <div class="ml-body">
+              <div class="ml-title">Кроссовки Salomon Go...</div>
+              <div class="ml-price">2 538 560 UZS</div>
+            </div>
+            <div class="ml-kebab" onclick="event.stopPropagation(); openKebab(2)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="6" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="18" r="1.6"/></svg>
+            </div>
+          </div>
+
+          <div class="ml-item" onclick="openKebab(3)">
+            <div class="ml-thumb ml-teapot"><div class="ml-thumb-em">🫖</div></div>
+            <div class="ml-body">
+              <div class="ml-title">Винтажный чайник ЛФ...</div>
+              <div class="ml-price">1 000 000 UZS</div>
+            </div>
+            <div class="ml-kebab" onclick="event.stopPropagation(); openKebab(3)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="6" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="18" r="1.6"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div data-tab-group="ml-tab" data-tab="waiting" class="hidden">
+          <div style="padding: 60px 24px; text-align:center; color: var(--text-2);">
+            <div style="font-size: 48px; margin-bottom: 12px;">📋</div>
+            <div style="font-weight:500;">Здесь будут объявления, требующие действий</div>
+          </div>
+        </div>
+
+        <div data-tab-group="ml-tab" data-tab="archive" class="hidden">
+          <div style="padding: 60px 24px; text-align:center; color: var(--text-2);">
+            <div style="font-size: 48px; margin-bottom: 12px;">🗂</div>
+            <div style="font-weight:500;">Здесь будут архивные объявления</div>
+          </div>
+        </div>
+
+        <div class="cta-dock">
+          <button class="btn" onclick="go('promo-hub')">Разместить объявление</button>
+        </div>
+      </div>
+
+            <!-- ========================================= SCREEN: BOOST CONFIG ========================================= -->
+      <div class="screen" data-screen="boost-config">
+        <div class="nav">
+          <button class="icon-btn" onclick="go('my-listings')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+          <div class="title"></div>
+          <button class="icon-btn" onclick="go('promo-hub')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <div style="padding: 4px 20px 0;">
+          <div class="h1">Настройте продвижение, чтобы продать быстрее</div>
+          <div class="subtle" style="margin-top:10px;">Ваше объявление увидит больше покупателей</div>
+        </div>
+
+        <div class="boost-wrap">
+          <div class="group-label">Выбрать срок продвижения</div>
+          <div class="group-sub">Дольше срок — больше просмотров</div>
+          <div class="pill-row" data-group="duration">
+            <div class="pill active" data-v="7">7 дней</div>
+            <div class="pill" data-v="14">14 дней</div>
+            <div class="pill" data-v="30">30 дней</div>
+          </div>
+
+          <div class="group-label">Увеличить просмотры</div>
+          <div class="grid-2" data-group="boost-mult">
+            <div class="choice-card" data-v="3">
+              <div class="head">До 3 раз</div>
+              <div class="sub">больше просмотров</div>
+            </div>
+            <div class="choice-card active" data-v="5">
+              <div class="badge">−15%</div>
+              <div class="head">До 5 раз</div>
+              <div class="sub">больше просмотров</div>
+            </div>
+            <div class="choice-card" data-v="10">
+              <div class="head">До 10 раз</div>
+              <div class="sub">больше просмотров</div>
+            </div>
+            <div class="choice-card" data-v="20">
+              <div class="head">До 20 раз</div>
+              <div class="sub">больше просмотров</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cta-dock">
+          <div class="total-row" style="padding: 8px 4px 0;">
+            <div class="lbl">Итого</div>
+            <div class="price"><span class="strike">5 750 UZS</span>5 000 UZS</div>
+          </div>
+          <button class="btn" onclick="goPay('boost', 5000, '5-кратный буст на 7 дней')">Продолжить</button>
+          <button class="btn btn-ghost" onclick="go('promo-hub')">Пропустить</button>
+        </div>
+      </div>
+
+      <!-- ========================================= SCREEN: PACKAGES LANDING ========================================= -->
+      <div class="screen" data-screen="packages-landing">
+        <div class="nav">
+          <div></div>
+          <div class="title"></div>
+          <button class="icon-btn" onclick="go('promo-hub')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <div class="packages-wrap">
+          <div class="h1">Попробуйте<br/>пакеты публикаций</div>
+          <div class="subtle" style="margin-top:10px;">Выберите категорию, в которой часто публикуете объявления, и настройте детали</div>
+
+          <div class="big-card">
+            <div class="tx">
+              <div class="ti">Дешевле до 50%</div>
+              <div class="sb">Чем покупать каждую публикацию отдельно</div>
+            </div>
+            <div class="em">
+              <svg width="84" height="84" viewBox="0 0 100 100" fill="none">
+                <path d="M50 8L57.5 14L66.5 11.5L70.5 19.5L79.5 22L80 31L87.5 36.5L84.5 45L89 53L83.5 60.5L84.5 70L76 73L72.5 81L63.5 80L57 87L50 82.5L43 87L36.5 80L27.5 81L24 73L15.5 70L16.5 60.5L11 53L15.5 45L12.5 36.5L20 31L20.5 22L29.5 19.5L33.5 11.5L42.5 14L50 8Z" fill="#F4D6E7" stroke="#E08FC0" stroke-width="1.5" stroke-linejoin="round"/>
+                <text x="50" y="62" text-anchor="middle" font-family="Onest, sans-serif" font-weight="800" font-size="40" fill="#E11D74">%</text>
+              </svg>
+            </div>
+          </div>
+
+          <div class="feature-grid">
+            <div class="feature-card">
+              <div>
+                <div class="ti">Разовая<br/>настройка</div>
+                <div class="sb">Потом ничего настраивать не нужно</div>
+              </div>
+              <div class="em">🧩</div>
+            </div>
+            <div class="feature-card">
+              <div>
+                <div class="ti">Действует<br/>120 дней</div>
+                <div class="sb">Публикуйте когда удобно</div>
+              </div>
+              <div class="em">📅</div>
+            </div>
+          </div>
+
+          <div class="faq">
+            <h3>Вопросы и ответы</h3>
+            <div class="faq-item" onclick="toggleFaq(this)">
+              <span>Можно ли поменять категорию?</span>
+              <span class="chev">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </span>
+            </div>
+            <div class="faq-answer">Да, до момента активации первой публикации из пакета. После этого категория фиксируется на 120 дней.</div>
+            <div class="faq-item" onclick="toggleFaq(this)">
+              <span>Можно ли изменить срок публикации?</span>
+              <span class="chev">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </span>
+            </div>
+            <div class="faq-answer">Срок публикации задаётся для каждого объявления отдельно в момент его создания.</div>
+            <div class="faq-item" onclick="toggleFaq(this)">
+              <span>Где смотреть остаток?</span>
+              <span class="chev">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </span>
+            </div>
+            <div class="faq-answer">В разделе «Мои пакеты» — там видно количество оставшихся публикаций и срок действия.</div>
+          </div>
+        </div>
+
+        <div class="cta-dock">
+          <button class="btn" onclick="go('packages-config')">Настроить пакет</button>
+        </div>
+      </div>
+
+      <!-- ========================================= SCREEN: PACKAGES CONFIG ========================================= -->
+      <div class="screen" data-screen="packages-config">
+        <div class="nav">
+          <button class="icon-btn" onclick="go('packages-landing')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+          <div class="title"></div>
+          <button class="icon-btn" onclick="go('promo-hub')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <div style="padding: 4px 20px 0;">
+          <div class="h1">Настройте пакет<br/>публикаций</div>
+          <div class="subtle" style="margin-top:10px;">Подобрали оптимальные настройки с учётом ваших последних размещений. Пакет действует 120 дней</div>
+          <div class="link" style="margin-top: 14px; font-size: 15px;">Как это работает</div>
+        </div>
+
+        <div class="boost-wrap">
+          <div class="group-label">Категория</div>
+          <div class="cat-list">
+            <div class="cat-item" onclick="pickCat(this)" data-cat="clothes">
+              <div class="cat-icon">👟</div>
+              <div class="cat-body">
+                <div class="cat-title">Одежда, обувь, аксессуары</div>
+                <div class="cat-sub">Осталась 1 бесплатная публикация</div>
+              </div>
+              <div class="radio-sm checked"></div>
+            </div>
+            <div class="cat-item" onclick="pickCat(this)" data-cat="elec">
+              <div class="cat-icon">🎧</div>
+              <div class="cat-body">
+                <div class="cat-title">Электроника</div>
+                <div class="cat-sub">Размещали недавно</div>
+              </div>
+              <div class="radio-sm"></div>
+            </div>
+          </div>
+          <div class="link" style="margin-top: 10px; font-size: 15px;" onclick="openSheet('cats-sheet')">Все категории</div>
+
+          <div class="group-label">Количество публикаций</div>
+          <div class="count-list" data-group="pkg-count">
+            <div class="count-card" data-v="10" data-price="9000">10 публикаций</div>
+            <div class="count-card active" data-v="25" data-price="20500">
+              <div class="badge">−15%</div>
+              25 публикаций
+            </div>
+            <div class="count-card" data-v="35" data-price="27500">35 публикаций</div>
+          </div>
+
+          <div class="group-label">Срок публикации</div>
+          <div class="group-sub">Чем дольше, тем больше просмотров</div>
+          <div class="pill-row" data-group="pkg-duration">
+            <div class="pill" data-v="7">7 дней</div>
+            <div class="pill" data-v="14">14 дней</div>
+            <div class="pill active" data-v="30">30 дней</div>
+          </div>
+        </div>
+
+        <div class="cta-dock">
+          <button class="btn" onclick="goPay('package', currentPkgPrice, currentPkgLabel)">Продолжить</button>
+        </div>
+      </div>
+
+      <!-- ========================================= SCREEN: PAYMENT SUMMARY ========================================= -->
+      <div class="screen" data-screen="payment-summary">
+        <div class="nav">
+          <button class="icon-btn" onclick="goBackFromPay()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+          <div class="title"></div>
+          <button class="icon-btn" onclick="go('promo-hub')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <div class="pay-summary-wrap">
+          <div class="h1" style="margin-top: 4px;">Вы оплачиваете</div>
+          <div class="pay-line">
+            <div class="l" id="pay-label">Пакет публикаций:<br/>25 публикаций на 30 дней</div>
+            <div class="r" id="pay-amount">20 500 UZS</div>
+          </div>
+
+          <div class="visvas-preview" id="visvas-preview" style="display:none;">
+            <div class="vp-headline">Выделение цветом привлекает<br/>до 2 раз больше просмотров</div>
+            <div class="vp-scroller">
+              <div class="vp-card vp-side">
+                <div class="vp-img"><span>👟</span></div>
+                <div class="vp-info">
+                  <div class="vp-price">2 538 560 UZS</div>
+                  <div class="vp-name">Кроссовки</div>
+                </div>
+              </div>
+              <div class="vp-card vp-highlighted">
+                <div class="vp-img vp-img-lg"><span>👟</span></div>
+                <div class="vp-info">
+                  <div class="vp-price">2 538 560 UZS</div>
+                  <div class="vp-name">Кроссовки Salomon XT-6 Gore Tex Black</div>
+                </div>
+              </div>
+              <div class="vp-card vp-side">
+                <div class="vp-img"><span>👟</span></div>
+                <div class="vp-info">
+                  <div class="vp-price">2 538 560 UZS</div>
+                  <div class="vp-name">Кроссовки</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="flex:1"></div>
+
+          <input class="promo-input" placeholder="Введите промокод"/>
+
+          <div class="pay-total">
+            <div>Итого</div>
+            <div id="pay-total">20 500 UZS</div>
+          </div>
+
+          <button class="btn" onclick="go('payment-method')">Перейти к оплате</button>
+          <div class="terms-note">Оплачивая, вы соглашаетесь с <span class="link">условиями оферты</span></div>
+        </div>
+      </div>
+
+      <!-- ========================================= SCREEN: PAYMENT METHOD ========================================= -->
+      <div class="screen" data-screen="payment-method">
+        <div class="nav">
+          <button class="icon-btn" onclick="go('payment-summary')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+          <div class="title">Выбор способа оплаты</div>
+          <div class="spacer-r"></div>
+        </div>
+
+        <div class="methods" data-group="pay-method">
+          <div class="method-row" onclick="pickMethod(this)">
+            <div class="method-logo visa">VISA</div>
+            <div class="method-body">
+              <div class="method-title">Visa</div>
+              <div class="method-sub">•• 0723</div>
+            </div>
+            <div class="radio-sm checked"></div>
+          </div>
+          <div class="method-row" onclick="pickMethod(this)">
+            <div class="method-logo uzcard">U</div>
+            <div class="method-body">
+              <div class="method-title">Uzcard</div>
+              <div class="method-sub">•• 0723</div>
+            </div>
+            <div class="radio-sm"></div>
+          </div>
+          <div class="method-row" onclick="pickMethod(this)">
+            <div class="method-logo humo">HUMO</div>
+            <div class="method-body">
+              <div class="method-title">Humo</div>
+              <div class="method-sub">•• 0723</div>
+            </div>
+            <div class="radio-sm"></div>
+          </div>
+          <div class="method-row" onclick="pickMethod(this)">
+            <div class="method-logo newcard">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            </div>
+            <div class="method-body">
+              <div class="method-title">Новая карта</div>
+              <div class="method-sub">Humo, Uzcard, Visa, MasterCard</div>
+            </div>
+            <div class="radio-sm"></div>
+          </div>
+        </div>
+
+        <div class="cta-dock">
+          <div class="pay-total">
+            <div>Итого</div>
+            <div id="pay-total-method">20 500 UZS</div>
+          </div>
+          <button class="btn" onclick="processPayment()">Оплатить</button>
+          <div class="terms-note"><span class="link">Политика конфиденциальности</span></div>
+        </div>
+      </div>
+
+      <!-- ========================================= SCREEN: PAYMENT PROCESSING ========================================= -->
+      <div class="screen" data-screen="payment-processing">
+        <div class="processing-title">Оплата услуг</div>
+        <div class="processing-wrap">
+          <div class="spinner"></div>
+          <div class="processing-h">Проверяем платёж</div>
+          <div class="processing-s">Обычно это занимает не больше<br/>10 секунд</div>
+        </div>
+      </div>
+
+      <!-- ========================================= SCREEN: SUCCESS ========================================= -->
+      <div class="screen" data-screen="payment-success">
+        <div class="success-wrap">
+          <div class="check-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="success-h">Оплата прошла!</div>
+          <div class="success-s" id="success-sub">Пакет публикаций готов к&nbsp;использованию.<br/>Откройте «Мои пакеты», чтобы посмотреть детали.</div>
+          <div style="height: 36px;"></div>
+          <button class="btn" style="max-width: 280px;" onclick="go('my-packages')">Перейти к пакетам</button>
+          <button class="btn btn-ghost" style="max-width: 280px; margin-top: 8px;" onclick="go('promo-hub')">На главный экран</button>
+        </div>
+      </div>
+
+      <!-- ========================================= SCREEN: MY PACKAGES ========================================= -->
+      <div class="screen" data-screen="my-packages">
+        <div class="nav">
+          <button class="icon-btn" onclick="go('promo-hub')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+          <div class="title">Мои пакеты</div>
+          <div class="spacer-r"></div>
+        </div>
+
+        <div class="tabs">
+          <div class="tab active" onclick="switchTab(this,'pkg-tab','active')">Активные<span class="count">2</span></div>
+          <div class="tab" onclick="switchTab(this,'pkg-tab','done')">Завершённые<span class="count">2</span></div>
+        </div>
+
+        <div data-tab-group="pkg-tab" data-tab="active">
+          <div class="pkg-active-card">
+            <div class="ring">
+              <svg width="54" height="54" viewBox="0 0 54 54">
+                <circle cx="27" cy="27" r="23" stroke="#E6E6EA" stroke-width="4" fill="none"/>
+                <circle cx="27" cy="27" r="23" stroke="#2ECC71" stroke-width="4" fill="none"
+                  stroke-linecap="round"
+                  stroke-dasharray="144.5"
+                  stroke-dashoffset="72.25"
+                  transform="rotate(-90 27 27)"/>
+              </svg>
+              <div class="ring-num">5</div>
+            </div>
+            <div class="ttl">Пакет из 10 публикаций</div>
+            <div class="sub">Действует до 12.12.2026</div>
+            <div class="meta">
+              <div class="it">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Срок публикации — 30 дней
+              </div>
+              <div class="it">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                Показ по Узбекистану
+              </div>
+            </div>
+          </div>
+
+          <div class="pkg-active-card" id="new-pkg-card" style="display:none;">
+            <div class="ring">
+              <svg width="54" height="54" viewBox="0 0 54 54">
+                <circle cx="27" cy="27" r="23" stroke="#E6E6EA" stroke-width="4" fill="none"/>
+                <circle cx="27" cy="27" r="23" stroke="#2ECC71" stroke-width="4" fill="none"
+                  stroke-linecap="round"
+                  stroke-dasharray="144.5"
+                  stroke-dashoffset="0"
+                  transform="rotate(-90 27 27)"/>
+              </svg>
+              <div class="ring-num" id="new-pkg-count">25</div>
+            </div>
+            <div class="ttl" id="new-pkg-title">Пакет из 25 публикаций</div>
+            <div class="sub">Действует до 12.04.2027</div>
+            <div class="meta">
+              <div class="it">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Срок публикации — <span id="new-pkg-dur">30</span> дней
+              </div>
+              <div class="it">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                Показ по Узбекистану
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div data-tab-group="pkg-tab" data-tab="done" class="hidden">
+          <div style="padding: 60px 24px; text-align:center; color: var(--text-2);">
+            <div style="font-size: 48px; margin-bottom: 12px;">🗂</div>
+            <div style="font-weight:500;">Здесь будут завершённые пакеты</div>
+          </div>
+        </div>
+
+        <div class="cta-dock">
+          <button class="btn" onclick="go('packages-landing')">Купить пакет</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================= BOTTOM SHEET: ALL CATEGORIES ========================================= -->
+    <div class="sheet-backdrop" id="sheet-backdrop" onclick="closeSheet('cats-sheet')"></div>
+    <div class="sheet" id="cats-sheet">
+      <div class="sheet-grabber"></div>
+      <div class="modal-header">
+        <div class="h">Все категории</div>
+        <button class="icon-btn" onclick="closeSheet('cats-sheet')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <input class="search-input" placeholder="Поиск"/>
+      <div class="chip-row">
+        <div class="chip active">Вещи, электроника, животные</div>
+        <div class="chip">Недвижимость</div>
+      </div>
+      <div class="sheet-content">
+        <div class="sheet-section-h">Вещи, электроника, животные</div>
+        <div class="cat-list cat-list-modal">
+          <div class="cat-item" onclick="pickCatModal(this)">
+            <div class="cat-icon" style="background: var(--bg-alt);"></div>
+            <div class="cat-body">
+              <div class="cat-title">Одежда, обувь, аксессуары</div>
+              <div class="cat-sub">Осталась 1 бесплатная публикация</div>
+            </div>
+            <div class="radio-sm checked"></div>
+          </div>
+          <div class="cat-item" onclick="pickCatModal(this)">
+            <div class="cat-icon" style="background: var(--bg-alt);"></div>
+            <div class="cat-body">
+              <div class="cat-title">Электроника</div>
+              <div class="cat-sub">Размещали недавно</div>
+            </div>
+            <div class="radio-sm"></div>
+          </div>
+          <div class="cat-item" onclick="pickCatModal(this)">
+            <div class="cat-icon" style="background: var(--bg-alt);"></div>
+            <div class="cat-body">
+              <div class="cat-title">Аудио и видео</div>
+              <div class="cat-sub">Размещали недавно</div>
+            </div>
+            <div class="radio-sm"></div>
+          </div>
+          <div class="cat-item" onclick="pickCatModal(this)">
+            <div class="cat-icon" style="background: var(--bg-alt);"></div>
+            <div class="cat-body">
+              <div class="cat-title">Игры, приставки и программы</div>
+            </div>
+            <div class="radio-sm"></div>
+          </div>
+          <div class="cat-item" onclick="pickCatModal(this)">
+            <div class="cat-icon" style="background: var(--bg-alt);"></div>
+            <div class="cat-body">
+              <div class="cat-title">Фототехника</div>
+            </div>
+            <div class="radio-sm"></div>
+          </div>
+          <div class="cat-item" onclick="pickCatModal(this)">
+            <div class="cat-icon" style="background: var(--bg-alt);"></div>
+            <div class="cat-body">
+              <div class="cat-title">Ремонт и строительство</div>
+            </div>
+            <div class="radio-sm"></div>
+          </div>
+        </div>
+      </div>
+      <button class="btn" onclick="closeSheet('cats-sheet')">Выбрать</button>
+    </div>
+
+    <!-- ========================================= BOTTOM SHEET: KEBAB ACTIONS ========================================= -->
+    <div class="sheet-backdrop" id="kebab-backdrop" onclick="closeKebabSheet()"></div>
+    <div class="sheet" id="kebab-sheet">
+      <div class="sheet-grabber"></div>
+
+      <div class="sheet-item-preview" id="kebab-item-preview">
+        <div class="ml-thumb ml-iphone"><div class="ml-thumb-em">📱</div></div>
+        <div class="ml-body">
+          <div class="ml-title">iPhone 14 pro max 256</div>
+          <div class="ml-price">14 900 000 UZS</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 14px;">
+        <div class="action-sheet-row" onclick="closeKebabSheet()">
+          <div class="ic">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </div>
+          <div class="lbl">Редактировать</div>
+        </div>
+        <div class="action-sheet-row primary" onclick="openServiceSheet()">
+          <div class="ic">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2z"/></svg>
+          </div>
+          <div class="lbl">Продвигать</div>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-3);"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="action-sheet-row" onclick="closeKebabSheet()">
+          <div class="ic">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+          </div>
+          <div class="lbl">Снять с публикации</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================= BOTTOM SHEET: SERVICE SELECTOR ========================================= -->
+    <div class="sheet-backdrop" id="service-backdrop" onclick="closeServiceSheet()"></div>
+    <div class="sheet" id="service-sheet">
+      <div class="sheet-grabber"></div>
+
+      <div class="modal-header" style="padding-bottom: 6px;">
+        <div class="h">Витрина услуг</div>
+        <button class="icon-btn" onclick="closeServiceSheet()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="subtle" style="margin-bottom: 16px;">Выберите способ продвижения для этого объявления</div>
+
+      <div class="sheet-item-preview" id="service-item-preview" style="margin-bottom: 16px;">
+        <div class="ml-thumb ml-iphone"><div class="ml-thumb-em">📱</div></div>
+        <div class="ml-body">
+          <div class="ml-title">iPhone 14 pro max 256</div>
+          <div class="ml-price">14 900 000 UZS</div>
+        </div>
+      </div>
+
+      <div id="service-list">
+        <div class="service-card" id="svc-boost" onclick="pickService('boost')">
+          <div class="em">⚡</div>
+          <div class="body">
+            <div class="ti">Буст</div>
+            <div class="sb">До 40 раз больше показов в&nbsp;ленте</div>
+          </div>
+          <div class="price">от 5 000 UZS</div>
+        </div>
+        <div class="service-card" id="svc-visvas" onclick="pickService('visvas')">
+          <div class="em">🎨</div>
+          <div class="body">
+            <div class="ti">Выделение цветом</div>
+            <div class="sb">До 2× больше просмотров</div>
+          </div>
+          <div class="price">от 3 500 UZS</div>
+        </div>
+        <div class="service-card" id="svc-tg" onclick="pickService('tg')">
+          <div class="em">✈️</div>
+          <div class="body">
+            <div class="ti">Реклама в Telegram</div>
+            <div class="sb">Показ подписчикам тематических каналов</div>
+          </div>
+          <div class="price">от 8 000 UZS</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom nav (lives outside screens so it never scrolls) -->
+    <div class="bottom-nav" id="bottom-nav-el">
+      <div class="nav-pill">
+        <div class="ni">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+        </div>
+        <div class="ni">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+        </div>
+        <div class="ni active">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-5 0-9 2-9 7v1h18v-1c0-5-4-7-9-7z"/></svg>
+        </div>
+        <div class="ni">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+          <span class="dot"></span>
+        </div>
+      </div>
+      <div class="fab">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </div>
+    </div>
+
+    <!-- Home indicator -->
+    <div class="home-indicator"></div>
+  </div>
+</div>
+
+<script>
+  // ============== STATE ==============
+  let currentPkgPrice = 20500;
+  let currentPkgLabel = '25 публикаций на 30 дней';
+  let currentBuyType = null;   // 'boost' | 'package'
+  let promoTypeChosen = 'boost'; // for items screen header
+  let prevScreen = 'profile';
+
+  // ============== NAV ==============
+  function go(name){
+    const screens = document.querySelectorAll('.screen');
+    const active = document.querySelector('.screen.active');
+    if (active && active.dataset.screen !== name) prevScreen = active.dataset.screen;
+    screens.forEach(s => s.classList.remove('active'));
+    const next = document.querySelector(`.screen[data-screen="${name}"]`);
+    if (next){
+      next.classList.add('active');
+      next.scrollTop = 0;
+    }
+    // Bottom nav only on screens that should have it
+    const navEl = document.getElementById('bottom-nav-el');
+    if (navEl) navEl.style.display = (name === 'profile') ? 'flex' : 'none';
+  }
+
+  function goPromoType(type){
+    // direct boost/visvas from hub cards → go to items selection bypassing divider
+    promoTypeChosen = type;
+    updateItemsHeader();
+    go('items-select');
+  }
+
+  function goItems(type){
+    promoTypeChosen = type;
+    updateItemsHeader();
+    go('items-select');
+  }
+
+  function updateItemsHeader(){
+    const titles = {
+      boost:  'Доступно для буста',
+      visvas: 'Доступно для выделения цветом',
+      tg:     'Доступно для рекламы в Telegram'
+    };
+    document.getElementById('items-title').textContent = titles[promoTypeChosen] || 'Доступно для продвижения';
+  }
+
+  function pickItem(el, idx){
+    // single-select within items list
+    el.parentElement.querySelectorAll('.item-pickable .radio').forEach(r => r.classList.remove('checked'));
+    el.querySelector('.radio').classList.add('checked');
+  }
+
+  function goNextAfterItem(){
+    // boost → boost-config, visvas → checkout with preview, tg → checkout
+    if (promoTypeChosen === 'boost') go('boost-config');
+    else if (promoTypeChosen === 'visvas') {
+      goPay('visvas', 3500, 'Выделение цветом на 7 дней');
+    } else {
+      goPay('tg', 8000, 'Реклама в Telegram, 7 дней');
+    }
+  }
+
+  function goPay(type, price, label){
+    currentBuyType = type;
+    document.getElementById('pay-label').innerHTML = (type === 'package' ? 'Пакет публикаций:<br/>' : '') + label;
+    const fmt = (p) => p.toLocaleString('ru-RU').replace(/,/g,' ') + ' UZS';
+    document.getElementById('pay-amount').textContent = fmt(price);
+    document.getElementById('pay-total').textContent = fmt(price);
+    document.getElementById('pay-total-method').textContent = fmt(price);
+    // Toggle VisVas in-feed preview block
+    document.getElementById('visvas-preview').style.display = (type === 'visvas') ? 'block' : 'none';
+    go('payment-summary');
+  }
+
+  function goBackFromPay(){
+    if (currentBuyType === 'package') go('packages-config');
+    else if (currentBuyType === 'visvas' || currentBuyType === 'tg') go('my-listings');
+    else go('boost-config');
+  }
+
+  // ============== SELECTION GROUPS (pills / cards) ==============
+  document.addEventListener('click', (e) => {
+    // pill / choice-card / count-card group selection
+    const target = e.target.closest('[data-group] .pill, [data-group] .choice-card, [data-group] .count-card');
+    if (target){
+      const group = target.parentElement;
+      if (!group.dataset.group) return;
+      group.querySelectorAll('.pill, .choice-card, .count-card').forEach(el => el.classList.remove('active'));
+      target.classList.add('active');
+
+      // update package pricing on change
+      if (group.dataset.group === 'pkg-count'){
+        currentPkgPrice = parseInt(target.dataset.price, 10);
+        const v = target.dataset.v;
+        const durEl = document.querySelector('[data-group="pkg-duration"] .pill.active');
+        const dur = durEl ? durEl.dataset.v : '30';
+        currentPkgLabel = `${v} публикаций на ${dur} дней`;
+      }
+      if (group.dataset.group === 'pkg-duration'){
+        const cntEl = document.querySelector('[data-group="pkg-count"] .count-card.active');
+        const v = cntEl ? cntEl.dataset.v : '25';
+        const dur = target.dataset.v;
+        currentPkgLabel = `${v} публикаций на ${dur} дней`;
+      }
+    }
+  });
+
+  // ============== TABS ==============
+  function switchTab(el, group, tab){
+    const tabs = el.parentElement.querySelectorAll('.tab');
+    tabs.forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll(`[data-tab-group="${group}"]`).forEach(b => {
+      if (b.dataset.tab === tab) b.classList.remove('hidden');
+      else b.classList.add('hidden');
+    });
+  }
+
+  // ============== FAQ ==============
+  function toggleFaq(el){
+    el.classList.toggle('open');
+  }
+
+  // ============== LANDING: Read more expand ==============
+  function toggleExtra(el){
+    const card = el.closest('.tool-card');
+    if (!card) return;
+    const extra = card.querySelector('.tool-extra');
+    if (!extra) return;
+    extra.classList.toggle('hidden');
+    el.classList.toggle('open');
+    const text = el.querySelector('.rm-text');
+    if (text) text.textContent = extra.classList.contains('hidden') ? 'Читать подробнее' : 'Свернуть';
+  }
+
+  // ============== CATEGORIES ==============
+  function pickCat(el){
+    el.parentElement.querySelectorAll('.radio-sm').forEach(r => r.classList.remove('checked'));
+    el.querySelector('.radio-sm').classList.add('checked');
+  }
+  function pickCatModal(el){
+    el.parentElement.querySelectorAll('.radio-sm').forEach(r => r.classList.remove('checked'));
+    el.querySelector('.radio-sm').classList.add('checked');
+  }
+
+  // ============== METHODS ==============
+  function pickMethod(el){
+    el.parentElement.querySelectorAll('.radio-sm').forEach(r => r.classList.remove('checked'));
+    el.querySelector('.radio-sm').classList.add('checked');
+  }
+
+  // ============== SHEET ==============
+  function openSheet(id){
+    document.getElementById('sheet-backdrop').classList.add('show');
+    document.getElementById(id).classList.add('show');
+  }
+  function closeSheet(id){
+    document.getElementById('sheet-backdrop').classList.remove('show');
+    document.getElementById(id).classList.remove('show');
+  }
+
+  // ============== V1 FLOW: KEBAB + SERVICE SHEETS ==============
+  // Per-item data: thumb class, emoji, title, price, available services
+  const MY_ITEMS = [
+    { thumb: 'ml-plates', em: '🍽️', title: 'Набор фарфоровых тарелок',  price: '850 000 UZS',     boost: true,  visvas: false, tg: true  },
+    { thumb: 'ml-iphone', em: '📱', title: 'iPhone 14 pro max 256',     price: '14 900 000 UZS',  boost: true,  visvas: true,  tg: true  },
+    { thumb: 'ml-shoe',   em: '👟', title: 'Кроссовки Salomon Gore Tex', price: '2 538 560 UZS',  boost: true,  visvas: true,  tg: true  },
+    { thumb: 'ml-teapot', em: '🫖', title: 'Винтажный чайник ЛФЗ',       price: '1 000 000 UZS',  boost: false, visvas: true,  tg: false },
+  ];
+  let activeItemIdx = 1;
+
+  function openKebab(idx){
+    activeItemIdx = idx;
+    const it = MY_ITEMS[idx];
+    const preview = document.getElementById('kebab-item-preview');
+    preview.innerHTML = `
+      <div class="ml-thumb ${it.thumb}"><div class="ml-thumb-em">${it.em}</div></div>
+      <div class="ml-body">
+        <div class="ml-title" style="white-space: normal;">${it.title}</div>
+        <div class="ml-price">${it.price}</div>
+      </div>`;
+    document.getElementById('kebab-backdrop').classList.add('show');
+    document.getElementById('kebab-sheet').classList.add('show');
+  }
+  function closeKebabSheet(){
+    document.getElementById('kebab-backdrop').classList.remove('show');
+    document.getElementById('kebab-sheet').classList.remove('show');
+  }
+
+  function openServiceSheet(){
+    closeKebabSheet();
+    setTimeout(() => {
+      const it = MY_ITEMS[activeItemIdx];
+      // Update preview
+      const preview = document.getElementById('service-item-preview');
+      preview.innerHTML = `
+        <div class="ml-thumb ${it.thumb}"><div class="ml-thumb-em">${it.em}</div></div>
+        <div class="ml-body">
+          <div class="ml-title" style="white-space: normal;">${it.title}</div>
+          <div class="ml-price">${it.price}</div>
+        </div>`;
+      // Toggle availability per service
+      configureService('svc-boost',  it.boost);
+      configureService('svc-visvas', it.visvas);
+      configureService('svc-tg',     it.tg);
+
+      document.getElementById('service-backdrop').classList.add('show');
+      document.getElementById('service-sheet').classList.add('show');
+    }, 280);
+  }
+  function configureService(id, available){
+    const el = document.getElementById(id);
+    if (!el) return;
+    const priceEl = el.querySelector('.price, .unavail');
+    if (available){
+      el.classList.remove('disabled');
+      el.style.pointerEvents = '';
+      if (priceEl && priceEl.classList.contains('unavail')){
+        priceEl.classList.remove('unavail');
+        priceEl.classList.add('price');
+        // Restore original price labels
+        if (id === 'svc-boost') priceEl.textContent = 'от 5 000 UZS';
+        if (id === 'svc-visvas') priceEl.textContent = 'от 3 500 UZS';
+        if (id === 'svc-tg') priceEl.textContent = 'от 8 000 UZS';
+      }
+    } else {
+      el.classList.add('disabled');
+      el.style.pointerEvents = 'none';
+      if (priceEl){
+        priceEl.classList.remove('price');
+        priceEl.classList.add('unavail');
+        priceEl.textContent = 'недоступно';
+      }
+    }
+  }
+  function closeServiceSheet(){
+    document.getElementById('service-backdrop').classList.remove('show');
+    document.getElementById('service-sheet').classList.remove('show');
+  }
+  function pickService(type){
+    closeServiceSheet();
+    setTimeout(() => {
+      if (type === 'boost') go('boost-config');
+      else if (type === 'visvas') goPay('visvas', 3500, 'Выделение цветом на 7 дней');
+      else if (type === 'tg') goPay('tg', 8000, 'Реклама в Telegram, 7 дней');
+    }, 280);
+  }
+
+  // ============== PAYMENT FLOW ==============
+  function processPayment(){
+    go('payment-processing');
+    setTimeout(() => {
+      // configure success state
+      const sub = document.getElementById('success-sub');
+      if (currentBuyType === 'package'){
+        sub.innerHTML = 'Пакет публикаций готов к&nbsp;использованию.<br/>Откройте «Мои пакеты», чтобы посмотреть детали.';
+        // surface new package card
+        const cntEl = document.querySelector('[data-group="pkg-count"] .count-card.active');
+        const durEl = document.querySelector('[data-group="pkg-duration"] .pill.active');
+        if (cntEl){
+          document.getElementById('new-pkg-count').textContent = cntEl.dataset.v;
+          document.getElementById('new-pkg-title').textContent = `Пакет из ${cntEl.dataset.v} публикаций`;
+          document.getElementById('new-pkg-card').style.display = 'block';
+        }
+        if (durEl){
+          document.getElementById('new-pkg-dur').textContent = durEl.dataset.v;
+        }
+      } else if (currentBuyType === 'visvas') {
+        sub.innerHTML = 'Выделение цветом активировано.<br/>Объявление будет выделяться в&nbsp;ленте.';
+      } else if (currentBuyType === 'tg') {
+        sub.innerHTML = 'Реклама в Telegram активирована.<br/>Показы начнутся в&nbsp;течение часа.';
+      } else {
+        sub.innerHTML = 'Продвижение активировано.<br/>Объявление начнёт показываться чаще в&nbsp;течение нескольких минут.';
+      }
+      go('payment-success');
+    }, 2200);
+  }
+</script>
+
+</body>
+</html>
